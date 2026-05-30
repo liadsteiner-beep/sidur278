@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "firebase/firestore";
+import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 
 // ─── FIREBASE ─────────────────────────────────────────────────────────────────
 const firebaseApp = initializeApp({
@@ -347,17 +347,15 @@ export default function App() {
       if (local.dayRemarks)   setDayRemarks(local.dayRemarks);
       if (local.shiftNotes)   setShiftNotes(local.shiftNotes);
     }
-    // Real-time listener with smart merge
-    let firstLoad = true;
-    const unsub = onSnapshot(doc(db, "pharmacy", "schedule"), (snap) => {
+    // Load once from Firebase (saves quota vs onSnapshot)
+    getDoc(doc(db, "pharmacy", "schedule")).then((snap) => {
       if (!snap.exists()) { setFbLoaded(true); return; }
       const d = snap.data();
       if (d.employees) {
         const hasOldNames = d.employees.some(e => ["פרח 1","פרח 2","פרח 3"].includes(e.name));
         if (!hasOldNames) setEmployees(d.employees);
       }
-      // Merge availability instead of replacing — keep local keys that Firebase doesn't have
-      if (d.availability) setAvailability(prev => firstLoad ? d.availability : { ...d.availability, ...prev });
+      if (d.availability) setAvailability(d.availability);
       if (d.assigned)     setAssigned(d.assigned);
       if (d.notes)        setNotes(d.notes);
       if (d.empNotes)     setEmpNotes(d.empNotes);
@@ -368,9 +366,8 @@ export default function App() {
       if (d.dayRemarks)   setDayRemarks(d.dayRemarks);
       if (d.shiftNotes)   setShiftNotes(d.shiftNotes);
       if (d.vacations)    setVacations(d.vacations);
-      firstLoad = false;
       setFbLoaded(true);
-    });
+    }).catch(() => setFbLoaded(true));
   }, []);
 
   useEffect(() => {
