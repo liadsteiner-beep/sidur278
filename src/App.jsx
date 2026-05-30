@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import * as React from "react";
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, setDoc, onSnapshot } from "firebase/firestore";
 
@@ -307,8 +306,17 @@ export default function App() {
   const [empNoteInput, setEmpNoteInput] = useState("");
   const [showAutoConfirm, setShowAutoConfirm] = useState(false);
   const [sendMode, setSendMode] = useState("personal");
-  const [weekOffset, setWeekOffset] = useState(0); // 0 = default scheduling week
+  const [weekOffset, setWeekOffset] = useState(0);
   const [vacations, setVacations] = useState({});
+  // Friday rota form state
+  const [newRotaDate, setNewRotaDate] = useState("");
+  const [newRotaOpen, setNewRotaOpen] = useState("");
+  const [newRotaClose, setNewRotaClose] = useState("");
+  // Vacation request form state (employee)
+  const [vacType, setVacType] = useState("יום בודד");
+  const [vacStart, setVacStart] = useState("");
+  const [vacEnd, setVacEnd] = useState("");
+  const [vacNote, setVacNote] = useState("");
   const weekDates = getWeekDates(weekOffset, published); // empId -> [{start, end, type, status, note}]
   const [dayRemarks, setDayRemarks] = useState({}); // dateKey -> ["הורדת מבצע", ...]
   const [shiftNotes, setShiftNotes] = useState({}); // dateKey_shiftId -> string
@@ -803,54 +811,45 @@ export default function App() {
           })}
 
           {/* Vacation request */}
-          {(()=>{
-            const [vacType, setVacType] = React.useState("יום בודד");
-            const [vacStart, setVacStart] = React.useState("");
-            const [vacEnd, setVacEnd] = React.useState("");
-            const [vacNote, setVacNote] = React.useState("");
-            const myVacations = vacations[currentUser.id] || [];
-            return (
-              <div style={S.card}>
-                <div style={S.sTitle}>🌴 בקשת חופשה</div>
-                {myVacations.length>0 && (
-                  <div style={{marginBottom:12}}>
-                    {myVacations.map(v=>(
-                      <div key={v.id} style={{fontSize:12,display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderBottom:"1px solid #f1f5f9"}}>
-                        <span>{v.type==="יום בודד"?v.start:`${v.start} – ${v.end}`} ({v.type})</span>
-                        <span style={{fontWeight:"700",color:v.status==="approved"?"#22c55e":v.status==="rejected"?"#ef4444":"#f59e0b"}}>
-                          {v.status==="approved"?"✓ אושר":v.status==="rejected"?"✗ נדחה":"⏳ ממתין"}
-                        </span>
-                      </div>
-                    ))}
+          <div style={S.card}>
+            <div style={S.sTitle}>🌴 בקשת חופשה</div>
+            {(vacations[currentUser.id]||[]).length>0 && (
+              <div style={{marginBottom:12}}>
+                {(vacations[currentUser.id]||[]).map(v=>(
+                  <div key={v.id} style={{fontSize:12,display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderBottom:"1px solid #f1f5f9"}}>
+                    <span>{v.type==="יום בודד"?v.start:`${v.start} – ${v.end}`} ({v.type})</span>
+                    <span style={{fontWeight:"700",color:v.status==="approved"?"#22c55e":v.status==="rejected"?"#ef4444":"#f59e0b"}}>
+                      {v.status==="approved"?"✓ אושר":v.status==="rejected"?"✗ נדחה":"⏳ ממתין"}
+                    </span>
                   </div>
-                )}
-                <div style={{display:"flex",gap:6,marginBottom:8}}>
-                  {["יום בודד","טווח תאריכים"].map(t=>(
-                    <button key={t} style={{...S.chip(vacType===t),flex:1,textAlign:"center"}} onClick={()=>setVacType(t)}>{t}</button>
-                  ))}
-                </div>
-                <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}}>
-                  <div style={{flex:1,minWidth:120}}>
-                    <div style={{fontSize:11,color:"#64748b",marginBottom:3}}>{vacType==="יום בודד"?"תאריך":"מתאריך"}</div>
-                    <input type="date" style={{...S.input,width:"100%",boxSizing:"border-box"}} value={vacStart} onChange={e=>setVacStart(e.target.value)} />
-                  </div>
-                  {vacType==="טווח תאריכים" && (
-                    <div style={{flex:1,minWidth:120}}>
-                      <div style={{fontSize:11,color:"#64748b",marginBottom:3}}>עד תאריך</div>
-                      <input type="date" style={{...S.input,width:"100%",boxSizing:"border-box"}} value={vacEnd} onChange={e=>setVacEnd(e.target.value)} />
-                    </div>
-                  )}
-                </div>
-                <input style={{...S.input,width:"100%",marginBottom:8,boxSizing:"border-box"}} placeholder="הערה (אופציונלי)" value={vacNote} onChange={e=>setVacNote(e.target.value)} />
-                <button style={{...S.btn("#0ea5e9"),width:"100%"}} onClick={()=>{
-                  if(!vacStart){showToast("נא לבחור תאריך","err");return;}
-                  const end = vacType==="יום בודד"?vacStart:vacEnd||vacStart;
-                  addVacationRequest(currentUser.id,vacStart,end,vacType,vacNote);
-                  setVacStart("");setVacEnd("");setVacNote("");
-                }}>שלח בקשת חופשה</button>
+                ))}
               </div>
-            );
-          })()}
+            )}
+            <div style={{display:"flex",gap:6,marginBottom:8}}>
+              {["יום בודד","טווח תאריכים"].map(t=>(
+                <button key={t} style={{...S.chip(vacType===t),flex:1,textAlign:"center"}} onClick={()=>setVacType(t)}>{t}</button>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}}>
+              <div style={{flex:1,minWidth:120}}>
+                <div style={{fontSize:11,color:"#64748b",marginBottom:3}}>{vacType==="יום בודד"?"תאריך":"מתאריך"}</div>
+                <input type="date" style={{...S.input,width:"100%",boxSizing:"border-box"}} value={vacStart} onChange={e=>setVacStart(e.target.value)} />
+              </div>
+              {vacType==="טווח תאריכים" && (
+                <div style={{flex:1,minWidth:120}}>
+                  <div style={{fontSize:11,color:"#64748b",marginBottom:3}}>עד תאריך</div>
+                  <input type="date" style={{...S.input,width:"100%",boxSizing:"border-box"}} value={vacEnd} onChange={e=>setVacEnd(e.target.value)} />
+                </div>
+              )}
+            </div>
+            <input style={{...S.input,width:"100%",marginBottom:8,boxSizing:"border-box"}} placeholder="הערה (אופציונלי)" value={vacNote} onChange={e=>setVacNote(e.target.value)} />
+            <button style={{...S.btn("#0ea5e9"),width:"100%"}} onClick={()=>{
+              if(!vacStart){showToast("נא לבחור תאריך","err");return;}
+              const end = vacType==="יום בודד"?vacStart:vacEnd||vacStart;
+              addVacationRequest(currentUser.id,vacStart,end,vacType,vacNote);
+              setVacStart("");setVacEnd("");setVacNote("");
+            }}>שלח בקשת חופשה</button>
+          </div>
 
           {/* Note to manager */}
           <div style={S.card}>
@@ -1429,63 +1428,48 @@ export default function App() {
         {managerTab==="settings" && (
           <div>
             {/* Friday rota - manual entry */}
-            {(()=>{
-              const [newRotaDate, setNewRotaDate] = React.useState("");
-              const [newRotaOpen, setNewRotaOpen] = React.useState("");
-              const [newRotaClose, setNewRotaClose] = React.useState("");
-              const pharmacists = employees.filter(e=>e.role==="רוקח");
-              return (
-                <div style={S.card}>
-                  <div style={S.sTitle}>📅 תורנויות שישי</div>
-                  {/* Existing entries */}
-                  {fridayRota.length>0 && (
-                    <div style={{marginBottom:12}}>
-                      {fridayRota.map((r,i)=>(
-                        <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #f1f5f9",fontSize:13}}>
-                          <span><strong>{r.date}</strong> — פתיחה: {r.open||"—"} | סגירה: {r.close||"—"}</span>
-                          <button style={S.btnSm("#ef4444")} onClick={()=>setFridayRota(prev=>prev.filter((_,j)=>j!==i))}>✕</button>
-                        </div>
-                      ))}
+            <div style={S.card}>
+              <div style={S.sTitle}>📅 תורנויות שישי</div>
+              {fridayRota.length>0 && (
+                <div style={{marginBottom:12}}>
+                  {fridayRota.map((r,i)=>(
+                    <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #f1f5f9",fontSize:13}}>
+                      <span><strong>{r.date}</strong> — פתיחה: {r.open||"—"} | סגירה: {r.close||"—"}</span>
+                      <button style={S.btnSm("#ef4444")} onClick={()=>setFridayRota(prev=>prev.filter((_,j)=>j!==i))}>✕</button>
                     </div>
-                  )}
-                  {/* Add new entry */}
-                  <div style={{display:"flex",flexDirection:"column",gap:7}}>
-                    <div style={{fontSize:12,color:"#64748b",fontWeight:"700"}}>הוסף תורנות שישי:</div>
-                    <input
-                      style={{...S.input,width:"100%",boxSizing:"border-box"}}
-                      type="date"
-                      value={newRotaDate}
-                      onChange={e=>setNewRotaDate(e.target.value)}
-                    />
-                    <div style={{display:"flex",gap:7}}>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:11,color:"#64748b",marginBottom:3}}>פתיחה (08:00-14:00)</div>
-                        <select style={{...S.input,width:"100%",boxSizing:"border-box"}} value={newRotaOpen} onChange={e=>setNewRotaOpen(e.target.value)}>
-                          <option value="">— בחר/י —</option>
-                          {pharmacists.map(emp=><option key={emp.id} value={emp.name}>{emp.name}</option>)}
-                        </select>
-                      </div>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:11,color:"#64748b",marginBottom:3}}>סגירה (14:00-20:00)</div>
-                        <select style={{...S.input,width:"100%",boxSizing:"border-box"}} value={newRotaClose} onChange={e=>setNewRotaClose(e.target.value)}>
-                          <option value="">— בחר/י —</option>
-                          {pharmacists.map(emp=><option key={emp.id} value={emp.name}>{emp.name}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                    <button style={{...S.btn(),width:"100%"}} onClick={()=>{
-                      if(!newRotaDate||(!newRotaOpen&&!newRotaClose)) return;
-                      const d = new Date(newRotaDate);
-                      const label = d.toLocaleDateString("he-IL",{day:"numeric",month:"numeric",year:"numeric"});
-                      setFridayRota(prev=>[...prev.filter(r=>r.date!==label), {date:label, open:newRotaOpen, close:newRotaClose}].sort((a,b)=>a.date.localeCompare(b.date)));
-                      setNewRotaDate(""); setNewRotaOpen(""); setNewRotaClose("");
-                      showToast("תורנות נוספה ✓");
-                    }}>+ הוסף תורנות</button>
-                    {fridayRota.length>0 && <button style={{...S.btn("#ef4444"),width:"100%"}} onClick={()=>{if(window.confirm("למחוק את כל התורנויות?")) setFridayRota([]);}}>מחק הכל</button>}
+                  ))}
+                </div>
+              )}
+              <div style={{display:"flex",flexDirection:"column",gap:7}}>
+                <div style={{fontSize:12,color:"#64748b",fontWeight:"700"}}>הוסף תורנות שישי:</div>
+                <input style={{...S.input,width:"100%",boxSizing:"border-box"}} type="date" value={newRotaDate} onChange={e=>setNewRotaDate(e.target.value)} />
+                <div style={{display:"flex",gap:7}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:11,color:"#64748b",marginBottom:3}}>פתיחה (08:00-14:00)</div>
+                    <select style={{...S.input,width:"100%",boxSizing:"border-box"}} value={newRotaOpen} onChange={e=>setNewRotaOpen(e.target.value)}>
+                      <option value="">— בחר/י —</option>
+                      {employees.filter(e=>e.role==="רוקח").map(emp=><option key={emp.id} value={emp.name}>{emp.name}</option>)}
+                    </select>
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:11,color:"#64748b",marginBottom:3}}>סגירה (14:00-20:00)</div>
+                    <select style={{...S.input,width:"100%",boxSizing:"border-box"}} value={newRotaClose} onChange={e=>setNewRotaClose(e.target.value)}>
+                      <option value="">— בחר/י —</option>
+                      {employees.filter(e=>e.role==="רוקח").map(emp=><option key={emp.id} value={emp.name}>{emp.name}</option>)}
+                    </select>
                   </div>
                 </div>
-              );
-            })()}
+                <button style={{...S.btn(),width:"100%"}} onClick={()=>{
+                  if(!newRotaDate||(!newRotaOpen&&!newRotaClose)) return;
+                  const d = new Date(newRotaDate);
+                  const label = d.toLocaleDateString("he-IL",{day:"numeric",month:"numeric",year:"numeric"});
+                  setFridayRota(prev=>[...prev.filter(r=>r.date!==label), {date:label, open:newRotaOpen, close:newRotaClose}].sort((a,b)=>a.date.localeCompare(b.date)));
+                  setNewRotaDate(""); setNewRotaOpen(""); setNewRotaClose("");
+                  showToast("תורנות נוספה ✓");
+                }}>+ הוסף תורנות</button>
+                {fridayRota.length>0 && <button style={{...S.btn("#ef4444"),width:"100%"}} onClick={()=>{if(window.confirm("למחוק את כל התורנויות?")) setFridayRota([]);}}>מחק הכל</button>}
+              </div>
+            </div>
 
             {/* Employees */}
             <div style={S.card}>
@@ -1589,4 +1573,3 @@ export default function App() {
     );
   }
 }
-
