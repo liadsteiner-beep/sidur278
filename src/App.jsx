@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "firebase/firestore";
 
 // ─── FIREBASE ─────────────────────────────────────────────────────────────────
 const firebaseApp = initializeApp({
@@ -15,6 +15,7 @@ const db = getFirestore(firebaseApp);
 
 async function fbSave(data) {
   try {
+    if (typeof window !== "undefined" && window._setSaveTime) window._setSaveTime();
     await setDoc(doc(db, "pharmacy", "schedule"), data);
   } catch(e) { console.error("Firebase save error:", e); }
 }
@@ -304,7 +305,7 @@ export default function App() {
   const [newEmpRole, setNewEmpRole]   = useState("רוקח");
   const [newEmpPhone, setNewEmpPhone] = useState("");
   const [empNoteInput, setEmpNoteInput] = useState("");
-  const [showAutoConfirm, setShowAutoConfirm] = useState(false);
+  const [fbLoaded, setFbLoaded] = useState(false);
   const [sendMode, setSendMode] = useState("personal");
   const [weekOffset, setWeekOffset] = useState(0);
   const [vacations, setVacations] = useState({});
@@ -346,15 +347,17 @@ export default function App() {
       if (local.dayRemarks)   setDayRemarks(local.dayRemarks);
       if (local.shiftNotes)   setShiftNotes(local.shiftNotes);
     }
-    // Load from Firebase once on mount
-    getDoc(doc(db, "pharmacy", "schedule")).then((snap) => {
-      if (!snap.exists()) return;
+    // Real-time listener with smart merge
+    let firstLoad = true;
+    const unsub = onSnapshot(doc(db, "pharmacy", "schedule"), (snap) => {
+      if (!snap.exists()) { setFbLoaded(true); return; }
       const d = snap.data();
       if (d.employees) {
         const hasOldNames = d.employees.some(e => ["פרח 1","פרח 2","פרח 3"].includes(e.name));
         if (!hasOldNames) setEmployees(d.employees);
       }
-      if (d.availability) setAvailability(d.availability);
+      // Merge availability instead of replacing — keep local keys that Firebase doesn't have
+      if (d.availability) setAvailability(prev => firstLoad ? d.availability : { ...d.availability, ...prev });
       if (d.assigned)     setAssigned(d.assigned);
       if (d.notes)        setNotes(d.notes);
       if (d.empNotes)     setEmpNotes(d.empNotes);
@@ -365,8 +368,9 @@ export default function App() {
       if (d.dayRemarks)   setDayRemarks(d.dayRemarks);
       if (d.shiftNotes)   setShiftNotes(d.shiftNotes);
       if (d.vacations)    setVacations(d.vacations);
+      firstLoad = false;
+      setFbLoaded(true);
     });
-    return () => {};
   }, []);
 
   useEffect(() => {
@@ -656,6 +660,15 @@ export default function App() {
     toast:  (type)=>({ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:type==="err"?"#ef4444":"#22c55e", color:"#fff", padding:"11px 22px", borderRadius:"11px", fontWeight:"700", fontSize:"14px", zIndex:9999, boxShadow:"0 4px 20px rgba(0,0,0,0.2)", whiteSpace:"nowrap" }),
     sTitle: { fontWeight:"800", fontSize:"13px", color:"#475569", marginBottom:8 },
   };
+
+  // ════════════ LOADING ════════════
+  if (!fbLoaded) return (
+    <div style={{minHeight:"100vh",background:"#1e293b",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"'Segoe UI',Tahoma,sans-serif"}}>
+      <div style={{fontSize:52,marginBottom:16}}>💊</div>
+      <div style={{color:"#38bdf8",fontWeight:"800",fontSize:18,marginBottom:8}}>{APP_NAME}</div>
+      <div style={{color:"#64748b",fontSize:14}}>טוען נתונים...</div>
+    </div>
+  );
 
   // ════════════ LOGIN ════════════
   if (view==="login") return (
