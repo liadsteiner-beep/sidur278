@@ -447,9 +447,21 @@ export default function App() {
     fbSave({ employees, availability, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, dayRemarks, shiftNotes, vacations: updated });
     showToast("חופשה נדחתה", "err");
   }
+  function parseDDMMYY(str) {
+    if (!str) return null;
+    const parts = str.split("/");
+    if (parts.length !== 3) return null;
+    const [dd, mm, yy] = parts;
+    return `20${yy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
+  }
   function isOnVacation(empId, date) {
     const key = dateKey(date);
-    return (vacations[empId]||[]).some(v => v.status==="approved" && key >= v.start && key <= v.end);
+    return (vacations[empId]||[]).some(v => {
+      if (v.status !== "approved") return false;
+      const start = parseDDMMYY(v.start) || v.start;
+      const end = parseDDMMYY(v.end) || v.end;
+      return key >= start && key <= end;
+    });
   }
   const pendingVacations = Object.entries(vacations).flatMap(([empId,reqs])=>
     reqs.filter(r=>r.status==="pending").map(r=>({...r, empId: Number(empId)}))
@@ -1057,14 +1069,18 @@ export default function App() {
               const today = new Date();
               const todayKey = dateKey(today);
               const onVacNow = employees.filter(emp =>
-                (vacations[emp.id]||[]).some(v => v.status==="approved" && todayKey >= v.start && todayKey <= v.end)
+                (vacations[emp.id]||[]).some(v => {
+                  if(v.status!=="approved") return false;
+                  const start = parseDDMMYY(v.start) || v.start;
+                  const end = parseDDMMYY(v.end) || v.end;
+                  return todayKey >= start && todayKey <= end;
+                })
               );
               const returning = employees.filter(emp =>
                 (vacations[emp.id]||[]).some(v => {
                   if(v.status!=="approved") return false;
-                  const returnDate = new Date(v.end);
-                  returnDate.setDate(returnDate.getDate()+1);
-                  return returnDate > today && new Date(v.end) >= today;
+                  const end = parseDDMMYY(v.end) || v.end;
+                  return end >= todayKey;
                 })
               );
               if(!returning.length) return null;
@@ -1076,7 +1092,7 @@ export default function App() {
                     return (
                       <div key={emp.id} style={{fontSize:13,color:"#166534",marginBottom:4,display:"flex",justifyContent:"space-between"}}>
                         <span><strong>{emp.name}</strong> בחופשה עד {vac?.end}</span>
-                        <span style={{fontSize:11,color:"#15803d"}}>חוזר/ת {new Date(vac?.end).toLocaleDateString("he-IL",{day:"numeric",month:"numeric"})}</span>
+                        <span style={{fontSize:11,color:"#15803d"}}>חוזר/ת {vac?.end}</span>
                       </div>
                     );
                   })}
