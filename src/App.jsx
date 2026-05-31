@@ -306,6 +306,7 @@ export default function App() {
   const [newEmpPhone, setNewEmpPhone] = useState("");
   const [empNoteInput, setEmpNoteInput] = useState("");
   const [fbLoaded, setFbLoaded] = useState(false);
+  const [showAutoConfirm, setShowAutoConfirm] = useState(false);
   const [sendMode, setSendMode] = useState("personal");
   const [weekOffset, setWeekOffset] = useState(0);
   const [vacations, setVacations] = useState({});
