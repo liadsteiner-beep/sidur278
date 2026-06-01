@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "firebase/firestore";
 
 // ─── FIREBASE ─────────────────────────────────────────────────────────────────
 const firebaseApp = initializeApp({
@@ -349,27 +349,25 @@ export default function App() {
       if (local.dayRemarks)   setDayRemarks(local.dayRemarks);
       if (local.shiftNotes)   setShiftNotes(local.shiftNotes);
     }
-    // Load once from Firebase (saves quota vs onSnapshot)
-    getDoc(doc(db, "pharmacy", "schedule")).then((snap) => {
-      const local = loadLocalData();
-      if (!snap.exists()) {
-        // No Firebase data — upload local data if exists
-        if (local) {
-          setFbLoaded(true);
-          // Will be saved when fbLoaded becomes true
-        } else {
-          setFbLoaded(true);
-        }
-        return;
-      }
+    // Real-time sync with Firebase
+    const local = loadLocalData();
+    let firstSnapshot = true;
+    const unsub = onSnapshot(doc(db, "pharmacy", "schedule"), (snap) => {
+      if (!snap.exists()) { setFbLoaded(true); return; }
       const d = snap.data();
       if (d.employees) {
         const hasOldNames = d.employees.some(e => ["פרח 1","פרח 2","פרח 3"].includes(e.name));
         if (!hasOldNames) setEmployees(d.employees);
       }
-      // Merge availability: Firebase + local (local wins for same keys)
-      const mergedAv = { ...(d.availability||{}), ...(local?.availability||{}) };
-      setAvailability(mergedAv);
+      if (firstSnapshot) {
+        // On first load, merge local availability with Firebase
+        const mergedAv = { ...(d.availability||{}), ...(local?.availability||{}) };
+        setAvailability(mergedAv);
+        firstSnapshot = false;
+      } else {
+        // Subsequent updates — just use Firebase data
+        if (d.availability) setAvailability(d.availability);
+      }
       if (d.assigned)     setAssigned(d.assigned);
       if (d.notes)        setNotes(d.notes);
       if (d.empNotes)     setEmpNotes(d.empNotes);
@@ -381,7 +379,8 @@ export default function App() {
       if (d.shiftNotes)   setShiftNotes(d.shiftNotes);
       if (d.vacations)    setVacations(d.vacations);
       setFbLoaded(true);
-    }).catch(() => setFbLoaded(true));
+    }, () => setFbLoaded(true));
+    return () => unsub();
   }, []);
 
   useEffect(() => {
