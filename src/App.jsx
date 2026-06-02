@@ -1110,54 +1110,56 @@ export default function App() {
           {/* Availability selection — weekly grid */}
           <div style={S.card}>
             <div style={{overflowX:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:420}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:420,tableLayout:"fixed"}}>
                 <thead>
                   <tr>
-                    <th style={{background:"var(--color-background-secondary, #f1f5f9)",padding:"7px 8px",border:"0.5px solid #e2e8f0",fontWeight:"600",textAlign:"right",minWidth:70,color:"#475569"}}></th>
+                    <th style={{background:"#f8fafc",padding:"8px 10px",border:"0.5px solid #e2e8f0",fontWeight:"600",textAlign:"right",width:90,color:"#475569",fontSize:12}}></th>
                     {weekDates.map(date=>{
                       const shifts=(DAY_SHIFTS[date.getDay()]||[]).filter(sh=>(sh.slots[myRole]||0)>0);
                       if(!shifts.length) return null;
                       return (
-                        <th key={dateKey(date)} style={{background:"var(--color-background-secondary, #f1f5f9)",padding:"7px 6px",border:"0.5px solid #e2e8f0",fontWeight:"600",textAlign:"center",color:"#1e293b"}}>
-                          <div style={{fontSize:12}}>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
-                          <div style={{fontSize:10,color:"#64748b",fontWeight:"400"}}>{formatDateShort(date)}</div>
+                        <th key={dateKey(date)} style={{background:"#f8fafc",padding:"8px 4px",border:"0.5px solid #e2e8f0",textAlign:"center",color:"#1e293b"}}>
+                          <div style={{fontSize:12,fontWeight:"600"}}>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
+                          <div style={{fontSize:10,color:"#64748b",fontWeight:"400",marginTop:1}}>{formatDateShort(date)}</div>
                         </th>
                       );
                     })}
                   </tr>
                 </thead>
                 <tbody>
-                  {/* Get all unique shift types for this role */}
                   {[{id:"morning",label:"בוקר"},{id:"evening",label:"ערב"},{id:"open",label:"פתיחה"},{id:"close",label:"סגירה"}].map(shType=>{
-                    // Check if any day has this shift for this role
                     const hasShift = weekDates.some(date=>(DAY_SHIFTS[date.getDay()]||[]).some(sh=>sh.id===shType.id&&(sh.slots[myRole]||0)>0));
                     if(!hasShift) return null;
+                    const timeStr = (()=>{
+                      const d = weekDates.find(d=>(DAY_SHIFTS[d.getDay()]||[]).find(s=>s.id===shType.id&&(s.slots[myRole]||0)>0));
+                      if(!d) return "";
+                      return (DAY_SHIFTS[d.getDay()]||[]).find(s=>s.id===shType.id)?.time||"";
+                    })();
                     return (
                       <tr key={shType.id}>
-                        <td style={{padding:"7px 8px",border:"0.5px solid #e2e8f0",background:"var(--color-background-secondary, #f1f5f9)",fontWeight:"600",fontSize:11,color:"#475569",whiteSpace:"nowrap"}}>
-                          {shType.label}<br/>
-                          <span style={{fontWeight:"400",color:"#94a3b8",fontSize:10}}>
-                            {weekDates.find(d=>(DAY_SHIFTS[d.getDay()]||[]).find(s=>s.id===shType.id))&&
-                              (DAY_SHIFTS[weekDates.find(d=>(DAY_SHIFTS[d.getDay()]||[]).find(s=>s.id===shType.id)).getDay()]||[]).find(s=>s.id===shType.id)?.time}
-                          </span>
+                        <td style={{padding:"8px 10px",border:"0.5px solid #e2e8f0",background:"#f8fafc",textAlign:"right"}}>
+                          <div style={{fontWeight:"600",fontSize:13,color:"#334155"}}>{shType.label}</div>
+                          <div style={{fontSize:10,color:"#94a3b8",marginTop:1}}>{timeStr}</div>
                         </td>
                         {weekDates.map(date=>{
                           const shift=(DAY_SHIFTS[date.getDay()]||[]).find(sh=>sh.id===shType.id&&(sh.slots[myRole]||0)>0);
-                          if(!shift) return <td key={dateKey(date)} style={{padding:"6px",border:"0.5px solid #e2e8f0",background:"#f8fafc",textAlign:"center",color:"#e2e8f0",fontSize:11}}>—</td>;
+                          if(!shift) return <td key={dateKey(date)} style={{padding:"6px 4px",border:"0.5px solid #e2e8f0",background:"#f8fafc",textAlign:"center",color:"#d1d5db",fontSize:12}}>—</td>;
                           const onVac=isOnVacation(currentUser.id,date);
+                          if(onVac) return <td key={dateKey(date)} style={{padding:"6px 4px",border:"0.5px solid #e2e8f0",textAlign:"center",background:"#d1fae5",fontSize:13}}>🌴</td>;
                           const active=isAv(currentUser.id,date,shift.id);
-                          const isMorning=shift.id==="morning"||shift.id==="open";
-                          if(onVac) return <td key={dateKey(date)} style={{padding:"6px",border:"0.5px solid #e2e8f0",textAlign:"center",background:"#d1fae5"}}>🌴</td>;
+                          const isBlue=shift.id==="morning"||shift.id==="open";
                           return (
-                            <td key={dateKey(date)} style={{padding:"5px",border:"0.5px solid #e2e8f0",textAlign:"center"}}>
+                            <td key={dateKey(date)} style={{padding:"5px 4px",border:"0.5px solid #e2e8f0",textAlign:"center"}}>
                               <button
                                 onClick={()=>!locked&&toggleAv(date,shift.id)}
                                 disabled={locked&&!active}
                                 style={{
-                                  width:"100%",padding:"7px 4px",borderRadius:"8px",fontSize:12,fontWeight:"600",cursor:locked&&!active?"default":"pointer",
-                                  border:`1.5px ${active?"solid":"dashed"} ${active?(isMorning?"#378ADD":"#7F77DD"):"#cbd5e1"}`,
-                                  background:active?(isMorning?"#E6F1FB":"#EEEDFE"):"transparent",
-                                  color:active?(isMorning?"#0C447C":"#3C3489"):"#94a3b8",
+                                  width:"100%",padding:"8px 4px",borderRadius:"8px",fontSize:13,fontWeight:"600",
+                                  cursor:locked&&!active?"default":"pointer",
+                                  border:`1.5px ${active?"solid":"dashed"} ${active?"#0ea5e9":"#cbd5e1"}`,
+                                  background:active?"#0ea5e9":"transparent",
+                                  color:active?"#fff":"#94a3b8",
+                                  transition:"all 0.15s",
                                 }}>
                                 {active?"✓":"+"}
                               </button>
