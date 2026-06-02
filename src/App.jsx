@@ -72,8 +72,11 @@ const DAY_SHIFTS = {
   5: [ { id:"open",    label:"פתיחה", time:"08:00-14:00", slots:{"רוקח":1,"פרח":1} }, { id:"close", label:"סגירה", time:"14:00-20:00", slots:{"רוקח":1,"פרח":0} } ],
   6: [ { id:"morning", label:"בוקר שבת", time:"09:00-15:00", slots:{"רוקח":1,"פרח":0} }, { id:"evening", label:"ערב שבת", time:"15:00-21:00", slots:{"רוקח":1,"פרח":1} } ],
 };
+const SESSION_KEY = "pharmacy_session_v1";
+function saveSession(user) { try { localStorage.setItem(SESSION_KEY, JSON.stringify(user)); } catch {} }
+function loadSession() { try { const r = localStorage.getItem(SESSION_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
+function clearSession() { try { localStorage.removeItem(SESSION_KEY); } catch {} }
 const STORAGE_KEY = "pharmacy_harishv1";
-const MANAGER_PASSWORD_DEFAULT = "liad2903";
 
 function loadLocalData() { try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
 function saveData(d) {
@@ -287,7 +290,7 @@ function autoAssign(employees, availability, fridayRota, assigned, weekDates) {
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [view, setView]               = useState("login");
+  const [view, setView]               = useState("loading");
   const [currentUser, setCurrentUser] = useState(null);
   const [pwInput, setPwInput]         = useState("");
   const [pwError, setPwError]         = useState(false);
@@ -382,6 +385,26 @@ export default function App() {
       if (d.shiftNotes)   setShiftNotes(d.shiftNotes);
       if (d.vacations)    setVacations(d.vacations);
       setFbLoaded(true);
+      // Restore session
+      const session = loadSession();
+      if (session) {
+        if (session.isManager) {
+          setCurrentUser(session);
+          setView("manager");
+        } else {
+          // Verify employee still exists
+          const emp = (d.employees||INITIAL_EMPLOYEES).find(e=>e.id===session.id);
+          if (emp && d.empPasswords?.[emp.id]) {
+            setCurrentUser({...emp,...session});
+            setEmpNoteInput((d.empNotes||{})[emp.id]||"");
+            setView("employee");
+          } else {
+            setView("login");
+          }
+        }
+      } else {
+        setView("login");
+      }
     }, () => setFbLoaded(true));
     return () => unsub();
   }, []);
@@ -397,6 +420,7 @@ export default function App() {
   function loginManager() {
     if (pwInput === managerPassword) {
       setCurrentUser({isManager:true});
+      saveSession({isManager:true});
       setView("manager");
       setPwInput("");
       setPwError(false);
@@ -419,12 +443,14 @@ export default function App() {
       if (empPwInput !== empPwConfirm) { setEmpPwError("הסיסמאות אינן תואמות"); return; }
       setEmpPasswords(prev => ({ ...prev, [selectedEmp.id]: empPwInput }));
       setCurrentUser(selectedEmp);
+      saveSession(selectedEmp);
       setEmpNoteInput(empNotes[selectedEmp.id] || "");
       setView("employee");
       setSelectedEmp(null);
     } else {
       if (empPwInput !== empPasswords[selectedEmp.id]) { setEmpPwError("סיסמה שגויה"); return; }
       setCurrentUser(selectedEmp);
+      saveSession(selectedEmp);
       setEmpNoteInput(empNotes[selectedEmp.id] || "");
       setView("employee");
       setSelectedEmp(null);
@@ -432,7 +458,7 @@ export default function App() {
   }
 
   function loginEmp(emp)  { setCurrentUser(emp); setEmpNoteInput(empNotes[emp.id]||""); setView("employee"); }
-  function logout()       { setCurrentUser(null); setView("login"); }
+  function logout() { clearSession(); setCurrentUser(null); setView("login"); }
 
   const REMARK_OPTIONS = ["הורדת מבצע","העלאת מבצע","הזמנת כללית","אספקת כללית"];
 
@@ -523,12 +549,27 @@ export default function App() {
   const getAssigned = (date,shiftId,role) => assigned[aKey(date,shiftId,role)]||[];
 
   function toggleAssign(date,shiftId,role,empId) {
-    const k   = aKey(date,shiftId,role);
+    const k = aKey(date,shiftId,role);
     const cur = assigned[k]||[];
-    const shift = (DAY_SHIFTS[date.getDay()]||[]).find(s=>s.id===shiftId);
-    const max = shift?.slots[role]||1;
-    // No max check in manual mode (manager override)
-    setAssigned(prev=>({...prev,[k]: cur.includes(empId)?cur.filter(id=>id!==empId):[...cur,empId]}));
+    const isAdding = !cur.includes(empId);
+
+    if (isAdding) {
+      // Remove from other shifts on same day
+      const dayShifts = DAY_SHIFTS[date.getDay()]||[];
+      const newAssigned = {...assigned};
+      dayShifts.forEach(sh => {
+        if (sh.id === shiftId) return;
+        const otherKey = aKey(date,sh.id,role);
+        const otherCur = newAssigned[otherKey]||[];
+        if (otherCur.includes(empId)) {
+          newAssigned[otherKey] = otherCur.filter(id=>id!==empId);
+        }
+      });
+      newAssigned[k] = [...cur, empId];
+      setAssigned(newAssigned);
+    } else {
+      setAssigned(prev=>({...prev,[k]:cur.filter(id=>id!==empId)}));
+    }
   }
 
   // ── AUTO ASSIGN ──
@@ -1345,32 +1386,28 @@ export default function App() {
                               {missingPh&&<div style={{fontSize:9,color:"#dc2626",fontWeight:"700",marginBottom:2}}>⚠️ חסר</div>}
                               {phAll.map(({id,shift})=>{
                                 const emp=employees.find(e=>e.id===id);
-                                return <div key={id} style={{padding:"2px 0"}}>
+                                return <div key={id} style={{padding:"1px 0"}}>
                                   <span style={{fontSize:12,fontWeight:"500",color:"#0369a1",display:"block"}}>{emp?.name}</span>
-                                  <span style={{fontSize:8,color:"#64748b",display:"block"}}>{shift?.time}{shift?.id==="close"?" סגירה":""}</span>
                                 </div>;
                               })}
                               {frMorning.length>0&&phAll.length>0&&<div style={{height:1,background:"#e2e8f0",margin:"3px 0"}}></div>}
                               {missingFr&&<div style={{fontSize:9,color:"#dc2626",fontWeight:"700",marginBottom:2}}>⚠️ חסר</div>}
                               {frMorning.map(id=>{
                                 const emp=employees.find(e=>e.id===id);
-                                return <div key={id} style={{padding:"2px 0"}}>
+                                return <div key={id} style={{padding:"1px 0"}}>
                                   <span style={{fontSize:12,fontWeight:"500",color:"#7e22ce",display:"block"}}>{emp?.name}</span>
-                                  <span style={{fontSize:8,color:"#64748b",display:"block"}}>{morningShift?.time}</span>
                                 </div>;
                               })}
                               {note&&<div style={{fontSize:9,color:"#1e293b",marginTop:3,borderTop:"0.5px solid #e2e8f0",paddingTop:2}}>{note}</div>}
                               {/* זמינים לא משובצים */}
                               {morningShift&&employees.filter(e=>e.role==="רוקח"&&isAv(e.id,date,morningShift.id)&&!phMorning.includes(e.id)).map(e=>(
-                                <div key={e.id} style={{padding:"1px 0",opacity:0.6}}>
+                                <div key={e.id} style={{padding:"1px 0",opacity:0.5}}>
                                   <span style={{fontSize:11,fontWeight:"500",color:"#0ea5e9",display:"block"}}>+ {e.name}</span>
-                                  <span style={{fontSize:8,color:"#64748b"}}>{morningShift.time}</span>
                                 </div>
                               ))}
                               {morningShift&&employees.filter(e=>e.role==="פרח"&&isAv(e.id,date,morningShift.id)&&!frMorning.includes(e.id)).map(e=>(
-                                <div key={e.id} style={{padding:"1px 0",opacity:0.6}}>
+                                <div key={e.id} style={{padding:"1px 0",opacity:0.5}}>
                                   <span style={{fontSize:11,fontWeight:"500",color:"#a855f7",display:"block"}}>+ {e.name}</span>
-                                  <span style={{fontSize:8,color:"#64748b"}}>{morningShift.time}</span>
                                 </div>
                               ))}
                             </div>
@@ -1404,32 +1441,28 @@ export default function App() {
                             {missingPh&&<div style={{fontSize:9,color:"#dc2626",fontWeight:"700",marginBottom:2}}>⚠️ חסר</div>}
                             {phEvening.map(id=>{
                               const emp=employees.find(e=>e.id===id);
-                              return <div key={id} style={{padding:"2px 0"}}>
+                              return <div key={id} style={{padding:"1px 0"}}>
                                 <span style={{fontSize:12,fontWeight:"500",color:"#0369a1",display:"block"}}>{emp?.name}</span>
-                                <span style={{fontSize:8,color:"#64748b",display:"block"}}>{eveningShift.time}</span>
                               </div>;
                             })}
                             {frEvening.length>0&&phEvening.length>0&&<div style={{height:1,background:"#e2e8f0",margin:"3px 0"}}></div>}
                             {missingFr&&(eveningShift.slots["פרח"]||0)>0&&<div style={{fontSize:9,color:"#dc2626",fontWeight:"700",marginBottom:2}}>⚠️ חסר</div>}
                             {frEvening.map(id=>{
                               const emp=employees.find(e=>e.id===id);
-                              return <div key={id} style={{padding:"2px 0"}}>
+                              return <div key={id} style={{padding:"1px 0"}}>
                                 <span style={{fontSize:12,fontWeight:"500",color:"#7e22ce",display:"block"}}>{emp?.name}</span>
-                                <span style={{fontSize:8,color:"#64748b",display:"block"}}>{eveningShift.time}</span>
                               </div>;
                             })}
                             {note&&<div style={{fontSize:9,color:"#1e293b",marginTop:3,borderTop:"0.5px solid #e2e8f0",paddingTop:2}}>{note}</div>}
                             {/* זמינים לא משובצים */}
                             {employees.filter(e=>e.role==="רוקח"&&isAv(e.id,date,eveningShift.id)&&!phEvening.includes(e.id)).map(e=>(
-                              <div key={e.id} style={{padding:"1px 0",opacity:0.6}}>
+                              <div key={e.id} style={{padding:"1px 0",opacity:0.5}}>
                                 <span style={{fontSize:11,fontWeight:"500",color:"#0ea5e9",display:"block"}}>+ {e.name}</span>
-                                <span style={{fontSize:8,color:"#64748b"}}>{eveningShift.time}</span>
                               </div>
                             ))}
                             {(eveningShift.slots["פרח"]||0)>0&&employees.filter(e=>e.role==="פרח"&&isAv(e.id,date,eveningShift.id)&&!frEvening.includes(e.id)).map(e=>(
-                              <div key={e.id} style={{padding:"1px 0",opacity:0.6}}>
+                              <div key={e.id} style={{padding:"1px 0",opacity:0.5}}>
                                 <span style={{fontSize:11,fontWeight:"500",color:"#a855f7",display:"block"}}>+ {e.name}</span>
-                                <span style={{fontSize:8,color:"#64748b"}}>{eveningShift.time}</span>
                               </div>
                             ))}
                           </div>
