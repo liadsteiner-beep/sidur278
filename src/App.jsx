@@ -1437,10 +1437,12 @@ export default function App() {
                       return end >= todayKey;
                     });
                     if(!vac) return null;
+                    const vacEndKey = parseDDMMYY(vac.end) || vac.end;
+                    const returnDate = (() => { try { const d = new Date(vacEndKey); d.setDate(d.getDate()+1); return d.toLocaleDateString("he-IL",{day:"numeric",month:"numeric"}); } catch { return vac.end; } })();
                     return (
                       <div key={emp.id} style={{fontSize:13,color:"#166534",marginBottom:4,display:"flex",justifyContent:"space-between"}}>
                         <span><strong>{emp.name}</strong> בחופשה {vac.start !== vac.end ? `${vac.start} עד ${vac.end}` : vac.end}</span>
-                        <span style={{fontSize:11,color:"#15803d"}}>חוזר/ת {(() => { const d = new Date(end.replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$2-$1')); d.setDate(d.getDate()+1); return d.toLocaleDateString("he-IL",{day:"numeric",month:"numeric"}); })()}</span>
+                        <span style={{fontSize:11,color:"#15803d"}}>חוזר/ת {returnDate}</span>
                       </div>
                     );
                   })}
