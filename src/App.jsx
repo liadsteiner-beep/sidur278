@@ -230,14 +230,16 @@ function autoAssign(employees, availability, fridayRota, assigned, weekDates) {
           const bB = BUDGET.find(x => x.name === b.name) || { min:0, max:99 };
           const cA = countShifts(a.id);
           const cB = countShifts(b.id);
-          // Prioritize those who need more shifts
+          // Balance morning/evening FIRST — most important rule
+          const ratioA = isMorning ? cA.morning - cA.evening : cA.evening - cA.morning;
+          const ratioB = isMorning ? cB.morning - cB.evening : cB.evening - cB.morning;
+          if (ratioA !== ratioB) return ratioA - ratioB;
+          // Then prioritize those who need more shifts
           const needA = bA.min - cA.total;
           const needB = bB.min - cB.total;
           if (needB !== needA) return needB - needA;
-          // Balance morning/evening: rule 5
-          const ratioA = isMorning ? cA.morning - cA.evening : cA.evening - cA.morning;
-          const ratioB = isMorning ? cB.morning - cB.evening : cB.evening - cB.morning;
-          return ratioA - ratioB;
+          // Finally balance total shifts
+          return cA.total - cB.total;
         });
 
       if (candidates.length > 0) {
@@ -267,9 +269,12 @@ function autoAssign(employees, availability, fridayRota, assigned, weekDates) {
         .sort((a, b) => {
           const cA = countShifts(a.id);
           const cB = countShifts(b.id);
+          // Balance morning/evening first
           const ratioA = isMorning ? cA.morning - cA.evening : cA.evening - cA.morning;
           const ratioB = isMorning ? cB.morning - cB.evening : cB.evening - cB.morning;
-          return ratioA - ratioB;
+          if (ratioA !== ratioB) return ratioA - ratioB;
+          // Then balance total
+          return cA.total - cB.total;
         });
       if (candidates.length > 0) {
         setA(date, shift.id, "פרח", [...current, candidates[0].id]);
