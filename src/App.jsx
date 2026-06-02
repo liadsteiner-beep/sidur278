@@ -1330,20 +1330,32 @@ export default function App() {
                               <span style={{background:filled>=needed?"#dcfce7":"#fef3c7",color:filled>=needed?"#15803d":"#92400e",borderRadius:"20px",padding:"1px 7px",fontSize:10,fontWeight:"700"}}>{filled}/{needed}</span>
                             </div>
                             <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                              {/* Available employees */}
+                              {/* Available employees — כחול=זמין, ירוק=משובץ */}
                               {avail.map(emp=>{
-                                const isAss=assignedIds.includes(emp.id);
-                                return <button key={emp.id} style={S.empChip(isAss)} onClick={()=>toggleAssign(date,shift.id,role,emp.id)}>{isAss?"✓ ":"+ "}{emp.name}</button>;
-                              })}
-                              {/* Non-available employees — grayed but clickable for manual assignment */}
-                              {employees.filter(e=>e.role===role&&!isAv(e.id,date,shift.id)&&!avail.find(a=>a.id===e.id)).map(emp=>{
                                 const isAss=assignedIds.includes(emp.id);
                                 return (
                                   <button key={emp.id}
-                                    style={{...S.empChip(isAss), opacity: isAss?1:0.4, borderStyle: isAss?"solid":"dashed"}}
-                                    onClick={()=>toggleAssign(date,shift.id,role,emp.id)}
-                                    title="שיבוץ ידני">
-                                    {isAss?"✓ ":"+ "}{emp.name}
+                                    style={S.empChip(isAss)}
+                                    onClick={()=>toggleAssign(date,shift.id,role,emp.id)}>
+                                    {isAss?"✓ ":"○ "}{emp.name}
+                                  </button>
+                                );
+                              })}
+                              {/* Non-available — מקווקו אפור. לחיצה = מוסיפה זמינות (לא שיבוץ) */}
+                              {employees.filter(e=>e.role===role&&!isAv(e.id,date,shift.id)).map(emp=>{
+                                const isAss=assignedIds.includes(emp.id);
+                                if(isAss) return null; // אם כבר משובץ — מופיע בכחול/ירוק למעלה
+                                return (
+                                  <button key={emp.id}
+                                    style={{...S.empChip(false), opacity:0.4, borderStyle:"dashed"}}
+                                    onClick={()=>{
+                                      // מוסיף זמינות בלבד — לא שיבוץ
+                                      const k = avKey(emp.id, date, shift.id);
+                                      setAvailability(prev=>({...prev,[k]:true}));
+                                      showToast(`${emp.name} סומן/ה כזמין/ה ✓`);
+                                    }}
+                                    title="לחץ להוספת זמינות">
+                                    + {emp.name}
                                   </button>
                                 );
                               })}
