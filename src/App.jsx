@@ -1282,7 +1282,9 @@ export default function App() {
   return (
     <div style={S.app}>
       <style>{`
-        [data-empid].emp-hov button { outline: 2.5px solid #f59e0b !important; background: #fef9c3 !important; opacity: 1 !important; font-weight: 800 !important; transform: scale(1.04); transition: all 0.12s; }
+        [data-empid].emp-hov button.emp-assigned { background: #bbf7d0 !important; border-color: #16a34a !important; font-weight: 800 !important; }
+        [data-empid].emp-hov button.emp-avail { background: #bfdbfe !important; border-color: #2563eb !important; font-weight: 800 !important; }
+        [data-empid].emp-hov button.emp-nonavail { background: #f1f5f9 !important; border-color: #94a3b8 !important; opacity: 1 !important; color: #475569 !important; }
       `}</style>
       <div style={S.header}>
         <div style={S.logo}>{APP_NAME} — מנהל/ת</div>
@@ -1650,7 +1652,7 @@ export default function App() {
                                         onDrop={e=>{ e.preventDefault(); handleDrop(date,shift.id,role,id); }}
                                         className="emp-btn emp-assigned"
                                         onClick={()=>toggleAssign(date,shift.id,role,id)}
-                                        style={{borderRadius:"6px",padding:"2px 4px",fontSize:10,fontWeight:"700",color:"#15803d",cursor:"grab",width:"100%",transition:"all 0.15s",background:"#dcfce7",border:"1.5px solid #22c55e"}}>
+                                        style={{borderRadius:"6px",padding:"3px 5px",fontSize:11,fontWeight:"700",color:"#14532d",cursor:"grab",width:"100%",transition:"all 0.15s",background:"#dcfce7",border:"2px solid #22c55e"}}>
                                         ✓ {emp?.name}
                                       </button>
                                       <input
@@ -1677,7 +1679,7 @@ export default function App() {
                                       onDrop={e=>{ e.preventDefault(); handleDrop(date,shift.id,role,emp.id); }}
                                       className="emp-btn emp-avail"
                                       onClick={()=>toggleAssign(date,shift.id,role,emp.id)}
-                                      style={{borderRadius:"6px",padding:"2px 4px",fontSize:10,fontWeight:"600",color:"#0369a1",cursor:"pointer",width:"100%",transition:"all 0.15s",background:"#eff6ff",border:"1.5px solid #0ea5e9"}}>
+                                      style={{borderRadius:"6px",padding:"3px 5px",fontSize:10,fontWeight:"500",color:"#1e40af",cursor:"pointer",width:"100%",transition:"all 0.15s",background:"#dbeafe",border:"1px dashed #3b82f6"}}>
                                       + {emp.name}
                                     </button>
                                   </div>
