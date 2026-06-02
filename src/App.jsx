@@ -1281,6 +1281,9 @@ export default function App() {
 
   return (
     <div style={S.app}>
+      <style>{`
+        [data-empid].emp-hov button { outline: 2.5px solid #f59e0b !important; background: #fef9c3 !important; opacity: 1 !important; font-weight: 800 !important; transform: scale(1.04); transition: all 0.12s; }
+      `}</style>
       <div style={S.header}>
         <div style={S.logo}>{APP_NAME} — מנהל/ת</div>
         <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
@@ -1635,19 +1638,19 @@ export default function App() {
                               <div style={{display:"flex",flexDirection:"column",gap:2,marginBottom:2}}>
                                 {assignedIds.map(id=>{
                                   const emp=employees.find(e=>e.id===id);
-                                  const isHov=hoveredEmp===id;
                                   return (
-                                    <div key={id}>
+                                    <div key={id} data-empid={id}
+                                      onMouseEnter={()=>{document.querySelectorAll(`[data-empid="${id}"]`).forEach(el=>el.classList.add("emp-hov"));}}
+                                      onMouseLeave={()=>{document.querySelectorAll(`[data-empid="${id}"]`).forEach(el=>el.classList.remove("emp-hov"));}}>
                                       <button
                                         draggable
-                                        onDragStart={()=>{ dragRef.current={empId:id,date,shiftId:shift.id,role}; setHoveredEmp(id); }}
-                                        onDragEnd={()=>{ dragRef.current=null; setHoveredEmp(null); }}
+                                        onDragStart={()=>{ dragRef.current={empId:id,date,shiftId:shift.id,role}; }}
+                                        onDragEnd={()=>{ dragRef.current=null; }}
                                         onDragOver={e=>e.preventDefault()}
                                         onDrop={e=>{ e.preventDefault(); handleDrop(date,shift.id,role,id); }}
-                                        style={{background:isHov?"#bbf7d0":"#dcfce7",border:`1.5px solid ${isHov?"#16a34a":"#22c55e"}`,borderRadius:"6px",padding:"2px 4px",fontSize:10,fontWeight:isHov?"800":"700",color:"#15803d",cursor:"grab",width:"100%",transition:"all 0.15s",transform:isHov?"scale(1.02)":"scale(1)"}}
+                                        className="emp-btn emp-assigned"
                                         onClick={()=>toggleAssign(date,shift.id,role,id)}
-                                        onMouseEnter={()=>setHoveredEmp(id)}
-                                        onMouseLeave={()=>setHoveredEmp(null)}>
+                                        style={{borderRadius:"6px",padding:"2px 4px",fontSize:10,fontWeight:"700",color:"#15803d",cursor:"grab",width:"100%",transition:"all 0.15s",background:"#dcfce7",border:"1.5px solid #22c55e"}}>
                                         ✓ {emp?.name}
                                       </button>
                                       <input
@@ -1665,34 +1668,34 @@ export default function App() {
                               <div style={{display:"flex",flexDirection:"column",gap:2}}
                                 onDragOver={e=>e.preventDefault()}
                                 onDrop={e=>{ e.preventDefault(); handleDrop(date,shift.id,role,null); }}>
-                                {avail.filter(e=>!assignedIds.includes(e.id)).map(emp=>{
-                                  const isHov=hoveredEmp===emp.id;
-                                  return (
-                                    <button key={emp.id}
+                                {avail.filter(e=>!assignedIds.includes(e.id)).map(emp=>(
+                                  <div key={emp.id} data-empid={emp.id}
+                                    onMouseEnter={()=>{document.querySelectorAll(`[data-empid="${emp.id}"]`).forEach(el=>el.classList.add("emp-hov"));}}
+                                    onMouseLeave={()=>{document.querySelectorAll(`[data-empid="${emp.id}"]`).forEach(el=>el.classList.remove("emp-hov"));}}>
+                                    <button
                                       onDragOver={e=>e.preventDefault()}
                                       onDrop={e=>{ e.preventDefault(); handleDrop(date,shift.id,role,emp.id); }}
-                                      style={{background:isHov?"#dbeafe":"#eff6ff",border:`1.5px solid ${isHov?"#2563eb":"#0ea5e9"}`,borderRadius:"6px",padding:"2px 4px",fontSize:10,fontWeight:isHov?"700":"600",color:"#0369a1",cursor:"pointer",width:"100%",transition:"all 0.15s",transform:isHov?"scale(1.02)":"scale(1)"}}
+                                      className="emp-btn emp-avail"
                                       onClick={()=>toggleAssign(date,shift.id,role,emp.id)}
-                                      onMouseEnter={()=>setHoveredEmp(emp.id)}
-                                      onMouseLeave={()=>setHoveredEmp(null)}>
+                                      style={{borderRadius:"6px",padding:"2px 4px",fontSize:10,fontWeight:"600",color:"#0369a1",cursor:"pointer",width:"100%",transition:"all 0.15s",background:"#eff6ff",border:"1.5px solid #0ea5e9"}}>
                                       + {emp.name}
                                     </button>
-                                  );
-                                })}
-                                {nonAvail.map(emp=>{
-                                  const isHov=hoveredEmp===emp.id;
-                                  return (
-                                    <button key={emp.id}
+                                  </div>
+                                ))}
+                                {nonAvail.map(emp=>(
+                                  <div key={emp.id} data-empid={emp.id}
+                                    onMouseEnter={()=>{document.querySelectorAll(`[data-empid="${emp.id}"]`).forEach(el=>el.classList.add("emp-hov"));}}
+                                    onMouseLeave={()=>{document.querySelectorAll(`[data-empid="${emp.id}"]`).forEach(el=>el.classList.remove("emp-hov"));}}>
+                                    <button
                                       onDragOver={e=>e.preventDefault()}
                                       onDrop={e=>{ e.preventDefault(); handleDrop(date,shift.id,role,emp.id); }}
-                                      style={{background:"transparent",border:`1px dashed ${isHov?"#94a3b8":"#cbd5e1"}`,borderRadius:"6px",padding:"2px 4px",fontSize:10,color:isHov?"#64748b":"#94a3b8",cursor:"pointer",width:"100%",opacity:isHov?0.9:0.6,transition:"all 0.15s"}}
+                                      className="emp-btn emp-nonavail"
                                       onClick={()=>{const k=avKey(emp.id,date,shift.id);setAvailability(prev=>({...prev,[k]:true}));showToast(`${emp.name} סומן/ה כזמינ/ה ✓`);}}
-                                      onMouseEnter={()=>setHoveredEmp(emp.id)}
-                                      onMouseLeave={()=>setHoveredEmp(null)}>
+                                      style={{borderRadius:"6px",padding:"2px 4px",fontSize:10,color:"#94a3b8",cursor:"pointer",width:"100%",transition:"all 0.15s",background:"transparent",border:"1px dashed #cbd5e1",opacity:0.6}}>
                                       {emp.name}
                                     </button>
-                                  );
-                                })}
+                                  </div>
+                                ))}
                               </div>
                             </td>
                           );
