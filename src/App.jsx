@@ -338,6 +338,7 @@ export default function App() {
   const [changePwNew2, setChangePwNew2]   = useState("");
   const [changePwErr, setChangePwErr]     = useState("");
   const [hoveredEmp, setHoveredEmp] = useState(null);
+  const dragRef = useRef(null); // {empId, date, shiftId, role}
 
   useEffect(() => {
     // Load from localStorage as fast fallback while Firebase loads
@@ -573,7 +574,32 @@ export default function App() {
     }
   }
 
-  // ── AUTO ASSIGN ──
+  function handleDrop(toDate, toShiftId, toRole, toEmpId) {
+    const from = dragRef.current;
+    if (!from) return;
+    if (from.role !== toRole) return; // רק אותו תפקיד
+
+    const fromKey = aKey(from.date, from.shiftId, from.role);
+    const toKey   = aKey(toDate, toShiftId, toRole);
+    const fromIds = [...(assigned[fromKey]||[])];
+    const toIds   = [...(assigned[toKey]||[])];
+
+    if (toEmpId && toEmpId !== from.empId) {
+      // החלפה בין שני עובדים
+      const newFrom = fromIds.map(id=>id===from.empId?toEmpId:id);
+      const newTo   = toIds.map(id=>id===toEmpId?from.empId:id);
+      setAssigned(prev=>({...prev,[fromKey]:newFrom,[toKey]:newTo}));
+    } else if (!toEmpId) {
+      // העברה לתא ריק
+      setAssigned(prev=>({
+        ...prev,
+        [fromKey]: fromIds.filter(id=>id!==from.empId),
+        [toKey]:   [...toIds, from.empId],
+      }));
+    }
+    dragRef.current = null;
+    showToast("שיבוץ עודכן ✓");
+  }
   function runAutoAssign() {
     const result = autoAssign(employees, availability, fridayRota, assigned, weekDates);
     setAssigned(result);
@@ -1595,31 +1621,55 @@ export default function App() {
                               <div style={{display:"flex",flexDirection:"column",gap:2,marginBottom:2}}>
                                 {assignedIds.map(id=>{
                                   const emp=employees.find(e=>e.id===id);
+                                  const isHov=hoveredEmp===id;
                                   return (
                                     <button key={id}
-                                      style={{background:"#dcfce7",border:"1.5px solid #22c55e",borderRadius:"6px",padding:"2px 4px",fontSize:10,fontWeight:"700",color:"#15803d",cursor:"pointer",width:"100%"}}
-                                      onClick={()=>toggleAssign(date,shift.id,role,id)}>
+                                      draggable
+                                      onDragStart={()=>{ dragRef.current={empId:id,date,shiftId:shift.id,role}; setHoveredEmp(id); }}
+                                      onDragEnd={()=>{ dragRef.current=null; setHoveredEmp(null); }}
+                                      onDragOver={e=>e.preventDefault()}
+                                      onDrop={e=>{ e.preventDefault(); handleDrop(date,shift.id,role,id); }}
+                                      style={{background:isHov?"#bbf7d0":"#dcfce7",border:`1.5px solid ${isHov?"#16a34a":"#22c55e"}`,borderRadius:"6px",padding:"2px 4px",fontSize:10,fontWeight:isHov?"800":"700",color:"#15803d",cursor:"grab",width:"100%",transition:"all 0.15s",transform:isHov?"scale(1.02)":"scale(1)"}}
+                                      onClick={()=>toggleAssign(date,shift.id,role,id)}
+                                      onMouseEnter={()=>setHoveredEmp(id)}
+                                      onMouseLeave={()=>setHoveredEmp(null)}>
                                       ✓ {emp?.name}
                                     </button>
                                   );
                                 })}
                               </div>
                               {/* Available to assign */}
-                              <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                                {avail.filter(e=>!assignedIds.includes(e.id)).map(emp=>(
-                                  <button key={emp.id}
-                                    style={{background:"#eff6ff",border:"1.5px solid #0ea5e9",borderRadius:"6px",padding:"2px 4px",fontSize:10,fontWeight:"600",color:"#0369a1",cursor:"pointer",width:"100%"}}
-                                    onClick={()=>toggleAssign(date,shift.id,role,emp.id)}>
-                                    + {emp.name}
-                                  </button>
-                                ))}
-                                {nonAvail.map(emp=>(
-                                  <button key={emp.id}
-                                    style={{background:"transparent",border:"1px dashed #cbd5e1",borderRadius:"6px",padding:"2px 4px",fontSize:10,color:"#94a3b8",cursor:"pointer",width:"100%",opacity:0.6}}
-                                    onClick={()=>{const k=avKey(emp.id,date,shift.id);setAvailability(prev=>({...prev,[k]:true}));showToast(`${emp.name} סומן/ה כזמינ/ה ✓`);}}>
-                                    {emp.name}
-                                  </button>
-                                ))}
+                              <div style={{display:"flex",flexDirection:"column",gap:2}}
+                                onDragOver={e=>e.preventDefault()}
+                                onDrop={e=>{ e.preventDefault(); handleDrop(date,shift.id,role,null); }}>
+                                {avail.filter(e=>!assignedIds.includes(e.id)).map(emp=>{
+                                  const isHov=hoveredEmp===emp.id;
+                                  return (
+                                    <button key={emp.id}
+                                      onDragOver={e=>e.preventDefault()}
+                                      onDrop={e=>{ e.preventDefault(); handleDrop(date,shift.id,role,emp.id); }}
+                                      style={{background:isHov?"#dbeafe":"#eff6ff",border:`1.5px solid ${isHov?"#2563eb":"#0ea5e9"}`,borderRadius:"6px",padding:"2px 4px",fontSize:10,fontWeight:isHov?"700":"600",color:"#0369a1",cursor:"pointer",width:"100%",transition:"all 0.15s",transform:isHov?"scale(1.02)":"scale(1)"}}
+                                      onClick={()=>toggleAssign(date,shift.id,role,emp.id)}
+                                      onMouseEnter={()=>setHoveredEmp(emp.id)}
+                                      onMouseLeave={()=>setHoveredEmp(null)}>
+                                      + {emp.name}
+                                    </button>
+                                  );
+                                })}
+                                {nonAvail.map(emp=>{
+                                  const isHov=hoveredEmp===emp.id;
+                                  return (
+                                    <button key={emp.id}
+                                      onDragOver={e=>e.preventDefault()}
+                                      onDrop={e=>{ e.preventDefault(); handleDrop(date,shift.id,role,emp.id); }}
+                                      style={{background:"transparent",border:`1px dashed ${isHov?"#94a3b8":"#cbd5e1"}`,borderRadius:"6px",padding:"2px 4px",fontSize:10,color:isHov?"#64748b":"#94a3b8",cursor:"pointer",width:"100%",opacity:isHov?0.9:0.6,transition:"all 0.15s"}}
+                                      onClick={()=>{const k=avKey(emp.id,date,shift.id);setAvailability(prev=>({...prev,[k]:true}));showToast(`${emp.name} סומן/ה כזמינ/ה ✓`);}}
+                                      onMouseEnter={()=>setHoveredEmp(emp.id)}
+                                      onMouseLeave={()=>setHoveredEmp(null)}>
+                                      {emp.name}
+                                    </button>
+                                  );
+                                })}
                               </div>
                             </td>
                           );
