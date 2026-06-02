@@ -77,6 +77,7 @@ function saveSession(user) { try { localStorage.setItem(SESSION_KEY, JSON.string
 function loadSession() { try { const r = localStorage.getItem(SESSION_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
 function clearSession() { try { localStorage.removeItem(SESSION_KEY); } catch {} }
 const STORAGE_KEY = "pharmacy_harishv1";
+const MANAGER_PASSWORD_DEFAULT = "liad2903";
 
 function loadLocalData() { try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
 function saveData(d) {
