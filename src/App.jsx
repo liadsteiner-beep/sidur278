@@ -822,19 +822,125 @@ export default function App() {
             </div>
           </div>
 
-          {/* Published schedule */}
+          {/* Published schedule — capsule design */}
           {published && (()=>{
-            const mySlots=[];
-            weekDates.forEach(date=>{(DAY_SHIFTS[date.getDay()]||[]).forEach(sh=>{if(getAssigned(date,sh.id,myRole).includes(currentUser.id)) mySlots.push({date,sh});});});
             return (
-              <div style={{...S.card,background:"#f0fdf4",border:"1px solid #86efac",marginBottom:12}}>
-                <div style={{fontWeight:"800",color:"#15803d",marginBottom:6}}>✅ המשמרות שלך השבוע</div>
-                {mySlots.length===0 ? <div style={{color:"#64748b",fontSize:13}}>לא שובצת השבוע</div>
-                  : mySlots.map(({date,sh})=>(
-                    <div key={dateKey(date)+sh.id} style={{fontSize:13,color:"#166534",marginBottom:2}}>
-                      <strong>{formatDate(date)}</strong> — {sh.label} ({sh.time})
-                    </div>
-                  ))}
+              <div style={{...S.card,background:"#fff",border:"1px solid #e2e8f0",padding:0,overflow:"hidden",marginBottom:12}}>
+                <div style={{background:"#1e293b",padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span style={{color:"#f8fafc",fontWeight:"500",fontSize:13}}>💊 סידור עבודה</span>
+                  <span style={{color:"#22c55e",fontSize:11}}>✓ פורסם</span>
+                </div>
+                <div style={{overflowX:"auto"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,tableLayout:"fixed"}}>
+                    <thead>
+                      <tr style={{background:"#1e293b",color:"#e2e8f0"}}>
+                        <th style={{padding:"7px 6px",textAlign:"right",fontWeight:"500",width:72,fontSize:11,border:"0.5px solid #334155"}}></th>
+                        {weekDates.map(date=>(
+                          <th key={dateKey(date)} style={{padding:"7px 4px",textAlign:"center",fontWeight:"500",fontSize:13,border:"0.5px solid #334155"}}>
+                            <div>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
+                            <div style={{fontSize:11,color:"#94a3b8",fontWeight:"400",marginTop:1}}>{formatDateShort(date)}</div>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* הערות יום */}
+                      <tr>
+                        <td style={{background:"#f8fafc",padding:"3px 6px",borderRight:"3px solid #1e293b",border:"0.5px solid #e2e8f0",fontSize:10,color:"#475569",verticalAlign:"middle",textAlign:"center"}}>📌</td>
+                        {weekDates.map(date=>{
+                          const remarks=getRemarks(date);
+                          return (
+                            <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:3,background:"#fff",verticalAlign:"middle",textAlign:"center"}}>
+                              {remarks.length>0&&<span style={{display:"inline-block",border:"1.5px solid #1e293b",borderRadius:4,padding:"2px 4px",fontSize:9,fontWeight:"500",color:"#1e293b",width:"100%"}}>{remarks.join(" | ")}</span>}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                      {/* בוקר */}
+                      <tr>
+                        <td style={{background:"#f8fafc",padding:"6px 4px",borderRight:"3px solid #22c55e",border:"0.5px solid #e2e8f0",verticalAlign:"middle",textAlign:"center"}}>
+                          <span style={{fontSize:14}}>☀️</span>
+                          <span style={{display:"block",fontSize:12,fontWeight:"500",color:"#1e293b"}}>בוקר</span>
+                        </td>
+                        {weekDates.map(date=>{
+                          const dayShifts=DAY_SHIFTS[date.getDay()]||[];
+                          const morningShift=dayShifts.find(s=>["morning","open"].includes(s.id));
+                          const closeShift=dayShifts.find(s=>s.id==="close");
+                          const phMorning=morningShift?getAssigned(date,morningShift.id,"רוקח"):[];
+                          const phClose=closeShift?getAssigned(date,closeShift.id,"רוקח"):[];
+                          const frMorning=morningShift?getAssigned(date,morningShift.id,"פרח"):[];
+                          const phAll=[...phMorning.map(id=>({id,shift:morningShift})),...phClose.map(id=>({id,shift:closeShift}))];
+                          const note=morningShift?getShiftNote(date,morningShift.id):"";
+                          const isMe=id=>id===currentUser.id;
+                          return (
+                            <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:4,verticalAlign:"top",background:"#fff"}}>
+                              {!morningShift&&!closeShift?<span style={{color:"#e2e8f0",fontSize:10}}>—</span>:(
+                                <div style={{textAlign:"right"}}>
+                                  {phAll.map(({id,shift})=>{
+                                    const emp=employees.find(e=>e.id===id);
+                                    return <div key={id} style={{padding:"2px 0",background:isMe(id)?"#fef9c3":"transparent",borderRadius:3}}>
+                                      <span style={{fontSize:12,fontWeight:"500",color:"#0369a1",display:"block"}}>{emp?.name}{isMe(id)?" ⭐":""}</span>
+                                      <span style={{fontSize:8,color:"#64748b",display:"block"}}>{shift?.time}</span>
+                                    </div>;
+                                  })}
+                                  {frMorning.length>0&&phAll.length>0&&<div style={{height:1,background:"#e2e8f0",margin:"3px 0"}}></div>}
+                                  {frMorning.map(id=>{
+                                    const emp=employees.find(e=>e.id===id);
+                                    return <div key={id} style={{padding:"2px 0",background:isMe(id)?"#fef9c3":"transparent",borderRadius:3}}>
+                                      <span style={{fontSize:12,fontWeight:"500",color:"#7e22ce",display:"block"}}>{emp?.name}{isMe(id)?" ⭐":""}</span>
+                                      <span style={{fontSize:8,color:"#64748b",display:"block"}}>{morningShift?.time}</span>
+                                    </div>;
+                                  })}
+                                  {note&&<div style={{fontSize:9,color:"#1e293b",marginTop:3,borderTop:"0.5px solid #e2e8f0",paddingTop:2}}>{note}</div>}
+                                </div>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                      {/* פס */}
+                      <tr><td colSpan={weekDates.length+1} style={{background:"#1e293b",height:4,padding:0,border:"none"}}></td></tr>
+                      {/* ערב */}
+                      <tr>
+                        <td style={{background:"#f8fafc",padding:"6px 4px",borderRight:"3px solid #6366f1",border:"0.5px solid #e2e8f0",verticalAlign:"middle",textAlign:"center"}}>
+                          <span style={{fontSize:14}}>🌙</span>
+                          <span style={{display:"block",fontSize:12,fontWeight:"500",color:"#1e293b"}}>ערב</span>
+                        </td>
+                        {weekDates.map(date=>{
+                          const dayShifts=DAY_SHIFTS[date.getDay()]||[];
+                          const eveningShift=dayShifts.find(s=>s.id==="evening");
+                          if(!eveningShift) return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",background:"#f8fafc",textAlign:"center",color:"#e2e8f0",fontSize:10}}>—</td>;
+                          const phEvening=getAssigned(date,eveningShift.id,"רוקח");
+                          const frEvening=getAssigned(date,eveningShift.id,"פרח");
+                          const note=getShiftNote(date,eveningShift.id);
+                          const isMe=id=>id===currentUser.id;
+                          return (
+                            <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:4,verticalAlign:"top",background:"#fff"}}>
+                              <div style={{textAlign:"right"}}>
+                                {phEvening.map(id=>{
+                                  const emp=employees.find(e=>e.id===id);
+                                  return <div key={id} style={{padding:"2px 0",background:isMe(id)?"#fef9c3":"transparent",borderRadius:3}}>
+                                    <span style={{fontSize:12,fontWeight:"500",color:"#0369a1",display:"block"}}>{emp?.name}{isMe(id)?" ⭐":""}</span>
+                                    <span style={{fontSize:8,color:"#64748b",display:"block"}}>{eveningShift.time}</span>
+                                  </div>;
+                                })}
+                                {frEvening.length>0&&phEvening.length>0&&<div style={{height:1,background:"#e2e8f0",margin:"3px 0"}}></div>}
+                                {frEvening.map(id=>{
+                                  const emp=employees.find(e=>e.id===id);
+                                  return <div key={id} style={{padding:"2px 0",background:isMe(id)?"#fef9c3":"transparent",borderRadius:3}}>
+                                    <span style={{fontSize:12,fontWeight:"500",color:"#7e22ce",display:"block"}}>{emp?.name}{isMe(id)?" ⭐":""}</span>
+                                    <span style={{fontSize:8,color:"#64748b",display:"block"}}>{eveningShift.time}</span>
+                                  </div>;
+                                })}
+                                {note&&<div style={{fontSize:9,color:"#1e293b",marginTop:3,borderTop:"0.5px solid #e2e8f0",paddingTop:2}}>{note}</div>}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             );
           })()}
@@ -1186,79 +1292,151 @@ export default function App() {
               </div>
             )}
 
-            {/* Weekly table */}
+            {/* Weekly table — new grid design */}
             <div style={{overflowX:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.08)"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,background:"#fff",tableLayout:"fixed"}}>
                 <thead>
-                  <tr style={{background:"#1e293b",color:"#f8fafc"}}>
-                    <th style={{padding:"10px 8px",textAlign:"right",fontWeight:"700",minWidth:80}}>משמרת</th>
+                  <tr style={{background:"#1e293b",color:"#e2e8f0"}}>
+                    <th style={{padding:"8px",textAlign:"right",fontWeight:"500",width:80,fontSize:12}}>משמרת</th>
                     {weekDates.map(date=>(
-                      <th key={dateKey(date)} style={{padding:"10px 8px",textAlign:"center",fontWeight:"700",minWidth:90}}>
+                      <th key={dateKey(date)} style={{padding:"8px 4px",textAlign:"center",fontWeight:"500",fontSize:13,border:"0.5px solid #334155"}}>
                         <div>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
-                        <div style={{fontSize:10,opacity:0.7}}>{formatDateShort(date)}</div>
-                        {isFirstOfMonth(date) && <div style={{fontSize:9,color:"#fbbf24"}}>סגירת סמים</div>}
-                        {getRemarks(date).map(r=>(
-                          <div key={r} style={{fontSize:9,color:"#f59e0b",fontWeight:"700"}}>📌 {r}</div>
-                        ))}
+                        <div style={{fontSize:11,color:"#94a3b8",fontWeight:"400",marginTop:2}}>{formatDateShort(date)}</div>
+                        {isFirstOfMonth(date)&&<div style={{fontSize:9,color:"#fbbf24"}}>🔒</div>}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {/* Rows: 2 display rows × 2 roles = 4 rows total */}
-                  {(() => {
-                    // Map each day's shift to a display row: "morning" row or "evening" row
-                    const ROW_GROUPS = [
-                      { rowId: "morning", label: "בוקר", matchIds: ["morning", "open"] },
-                      { rowId: "evening", label: "ערב",  matchIds: ["evening", "close"] },
-                    ];
-                    const rows = [];
-                    ROW_GROUPS.forEach((group, gi) => {
-                      ROLES.forEach((role, ri) => {
-                        rows.push(
-                          <tr key={`${group.rowId}_${role}`} style={{background:(gi*2+ri)%2===0?"#f8fafc":"#fff",borderBottom:"1px solid #e2e8f0"}}>
-                            <td style={{padding:"8px",fontWeight:"700",color:ROLE_COLORS[role]?.dark,whiteSpace:"nowrap"}}>
-                              {group.label}&nbsp;<span style={S.badge(role)}>{role}</span>
-                            </td>
-                            {weekDates.map(date=>{
-                              const dayShifts = DAY_SHIFTS[date.getDay()] || [];
-                              // Find the shift for this day that belongs to this row group
-                              const shift = dayShifts.find(s => group.matchIds.includes(s.id));
-                              if (!shift) return <td key={dateKey(date)} style={{padding:"6px 4px",textAlign:"center",color:"#e2e8f0",fontSize:10}}>—</td>;
-                              const needed = shift.slots[role] || 0;
-                              if (needed === 0) return <td key={dateKey(date)} style={{padding:"6px 4px",textAlign:"center",color:"#e2e8f0",fontSize:10}}>—</td>;
-                              const empIds = getAssigned(date, shift.id, role);
-                              const filled = empIds.length;
-                              const isMissing = filled < needed;
-                              const names = empIds.map(id => employees.find(e => e.id === id)?.name || "?");
-                              const isDrugClosing = isFirstOfMonth(date) && group.rowId === "morning" && role === "רוקח";
-                              // Show shift time hint for friday/saturday where it differs
-                              const dow = date.getDay();
-                              const showTime = (dow === 5 || dow === 6);
-                              return (
-                                <td key={dateKey(date)} style={{padding:"6px 4px",textAlign:"center",background:isMissing?"#fef2f2":isDrugClosing?"#fefce8":"inherit"}}>
-                                  {showTime && <div style={{fontSize:9,color:"#94a3b8",marginBottom:2}}>{shift.time}</div>}
-                                  {isMissing && <div style={{color:"#ef4444",fontWeight:"800",fontSize:10}}>⚠️ חסר</div>}
-                                  {names.map((n,ni)=>(
-                                    <div key={ni} style={{fontSize:11,fontWeight:"600",color:isMissing?"#dc2626":"#1e293b"}}>
-                                      {n}{isDrugClosing && ni===names.length-1 ? " 🔒" : ""}
-                                    </div>
-                                  ))}
-                                  {names.length===0 && <div style={{color:"#ef4444",fontSize:10,fontWeight:"700"}}>—</div>}
-                                  {getShiftNote(date,shift.id) && <div style={{fontSize:9,color:"#92400e",marginTop:2,background:"#fef3c7",borderRadius:4,padding:"1px 4px"}}>💬 {getShiftNote(date,shift.id)}</div>}
-                                  {/* Show vacations */}
-                                  {employees.filter(e=>e.role===role&&isOnVacation(e.id,date)).map(e=>(
-                                    <div key={e.id} style={{fontSize:9,color:"#065f46",background:"#d1fae5",borderRadius:4,padding:"1px 4px",marginTop:1}}>🌴 {e.name}</div>
-                                  ))}
-                                </td>
-                              );
+                  {/* הערות יום */}
+                  <tr>
+                    <td style={{background:"#f8fafc",padding:"4px 6px",borderRight:"3px solid #1e293b",border:"0.5px solid #e2e8f0",fontSize:10,color:"#475569",verticalAlign:"middle",textAlign:"center"}}>📌</td>
+                    {weekDates.map(date=>{
+                      const remarks=getRemarks(date);
+                      return (
+                        <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:3,background:"#fff",verticalAlign:"middle",textAlign:"center"}}>
+                          {remarks.length>0&&<span style={{display:"inline-block",border:"1.5px solid #1e293b",borderRadius:5,padding:"2px 4px",fontSize:10,fontWeight:"500",color:"#1e293b",width:"100%"}}>{remarks.join(" | ")}</span>}
+                        </td>
+                      );
+                    })}
+                  </tr>
+
+                  {/* שורת בוקר */}
+                  <tr>
+                    <td style={{background:"#f8fafc",padding:"6px 8px",borderRight:"3px solid #22c55e",border:"0.5px solid #e2e8f0",verticalAlign:"middle",textAlign:"center"}}>
+                      <span style={{fontSize:16}}>☀️</span>
+                      <span style={{display:"block",fontSize:13,fontWeight:"500",color:"#1e293b"}}>בוקר</span>
+                    </td>
+                    {weekDates.map(date=>{
+                      const dayShifts=DAY_SHIFTS[date.getDay()]||[];
+                      const morningShift=dayShifts.find(s=>["morning","open"].includes(s.id));
+                      const closeShift=dayShifts.find(s=>s.id==="close");
+                      const phMorning=morningShift?getAssigned(date,morningShift.id,"רוקח"):[];
+                      const phClose=closeShift?getAssigned(date,closeShift.id,"רוקח"):[];
+                      const frMorning=morningShift?getAssigned(date,morningShift.id,"פרח"):[];
+                      const phAll=[...phMorning.map(id=>({id,shift:morningShift})),...phClose.map(id=>({id,shift:closeShift}))];
+                      const missingPh=morningShift&&phMorning.length<(morningShift.slots["רוקח"]||0);
+                      const missingFr=morningShift&&frMorning.length<(morningShift.slots["פרח"]||0);
+                      const note=morningShift?getShiftNote(date,morningShift.id):"";
+                      return (
+                        <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:4,verticalAlign:"top",background:missingPh||missingFr?"#fef2f2":"#fff"}}>
+                          {!morningShift&&!closeShift ? <span style={{color:"#e2e8f0",fontSize:10}}>—</span> : (
+                            <div style={{textAlign:"right"}}>
+                              {missingPh&&<div style={{fontSize:9,color:"#dc2626",fontWeight:"700",marginBottom:2}}>⚠️ חסר</div>}
+                              {phAll.map(({id,shift})=>{
+                                const emp=employees.find(e=>e.id===id);
+                                return <div key={id} style={{padding:"2px 0"}}>
+                                  <span style={{fontSize:12,fontWeight:"500",color:"#0369a1",display:"block"}}>{emp?.name}</span>
+                                  <span style={{fontSize:8,color:"#64748b",display:"block"}}>{shift?.time}{shift?.id==="close"?" סגירה":""}</span>
+                                </div>;
+                              })}
+                              {frMorning.length>0&&phAll.length>0&&<div style={{height:1,background:"#e2e8f0",margin:"3px 0"}}></div>}
+                              {missingFr&&<div style={{fontSize:9,color:"#dc2626",fontWeight:"700",marginBottom:2}}>⚠️ חסר</div>}
+                              {frMorning.map(id=>{
+                                const emp=employees.find(e=>e.id===id);
+                                return <div key={id} style={{padding:"2px 0"}}>
+                                  <span style={{fontSize:12,fontWeight:"500",color:"#7e22ce",display:"block"}}>{emp?.name}</span>
+                                  <span style={{fontSize:8,color:"#64748b",display:"block"}}>{morningShift?.time}</span>
+                                </div>;
+                              })}
+                              {note&&<div style={{fontSize:9,color:"#1e293b",marginTop:3,borderTop:"0.5px solid #e2e8f0",paddingTop:2}}>{note}</div>}
+                              {/* זמינים לא משובצים */}
+                              {morningShift&&employees.filter(e=>e.role==="רוקח"&&isAv(e.id,date,morningShift.id)&&!phMorning.includes(e.id)).map(e=>(
+                                <div key={e.id} style={{padding:"1px 0",opacity:0.6}}>
+                                  <span style={{fontSize:11,fontWeight:"500",color:"#0ea5e9",display:"block"}}>+ {e.name}</span>
+                                  <span style={{fontSize:8,color:"#64748b"}}>{morningShift.time}</span>
+                                </div>
+                              ))}
+                              {morningShift&&employees.filter(e=>e.role==="פרח"&&isAv(e.id,date,morningShift.id)&&!frMorning.includes(e.id)).map(e=>(
+                                <div key={e.id} style={{padding:"1px 0",opacity:0.6}}>
+                                  <span style={{fontSize:11,fontWeight:"500",color:"#a855f7",display:"block"}}>+ {e.name}</span>
+                                  <span style={{fontSize:8,color:"#64748b"}}>{morningShift.time}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+
+                  {/* פס מפריד */}
+                  <tr><td colSpan={weekDates.length+1} style={{background:"#1e293b",height:4,padding:0,border:"none"}}></td></tr>
+
+                  {/* שורת ערב */}
+                  <tr>
+                    <td style={{background:"#f8fafc",padding:"6px 8px",borderRight:"3px solid #6366f1",border:"0.5px solid #e2e8f0",verticalAlign:"middle",textAlign:"center"}}>
+                      <span style={{fontSize:16}}>🌙</span>
+                      <span style={{display:"block",fontSize:13,fontWeight:"500",color:"#1e293b"}}>ערב</span>
+                    </td>
+                    {weekDates.map(date=>{
+                      const dayShifts=DAY_SHIFTS[date.getDay()]||[];
+                      const eveningShift=dayShifts.find(s=>["evening"].includes(s.id));
+                      if(!eveningShift) return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",background:"#f8fafc",textAlign:"center",color:"#e2e8f0",fontSize:10}}>—</td>;
+                      const phEvening=getAssigned(date,eveningShift.id,"רוקח");
+                      const frEvening=getAssigned(date,eveningShift.id,"פרח");
+                      const missingPh=phEvening.length<(eveningShift.slots["רוקח"]||0);
+                      const missingFr=frEvening.length<(eveningShift.slots["פרח"]||0);
+                      const note=getShiftNote(date,eveningShift.id);
+                      return (
+                        <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:4,verticalAlign:"top",background:missingPh||missingFr?"#fef2f2":"#fff"}}>
+                          <div style={{textAlign:"right"}}>
+                            {missingPh&&<div style={{fontSize:9,color:"#dc2626",fontWeight:"700",marginBottom:2}}>⚠️ חסר</div>}
+                            {phEvening.map(id=>{
+                              const emp=employees.find(e=>e.id===id);
+                              return <div key={id} style={{padding:"2px 0"}}>
+                                <span style={{fontSize:12,fontWeight:"500",color:"#0369a1",display:"block"}}>{emp?.name}</span>
+                                <span style={{fontSize:8,color:"#64748b",display:"block"}}>{eveningShift.time}</span>
+                              </div>;
                             })}
-                          </tr>
-                        );
-                      });
-                    });
-                    return rows;
-                  })()}
+                            {frEvening.length>0&&phEvening.length>0&&<div style={{height:1,background:"#e2e8f0",margin:"3px 0"}}></div>}
+                            {missingFr&&(eveningShift.slots["פרח"]||0)>0&&<div style={{fontSize:9,color:"#dc2626",fontWeight:"700",marginBottom:2}}>⚠️ חסר</div>}
+                            {frEvening.map(id=>{
+                              const emp=employees.find(e=>e.id===id);
+                              return <div key={id} style={{padding:"2px 0"}}>
+                                <span style={{fontSize:12,fontWeight:"500",color:"#7e22ce",display:"block"}}>{emp?.name}</span>
+                                <span style={{fontSize:8,color:"#64748b",display:"block"}}>{eveningShift.time}</span>
+                              </div>;
+                            })}
+                            {note&&<div style={{fontSize:9,color:"#1e293b",marginTop:3,borderTop:"0.5px solid #e2e8f0",paddingTop:2}}>{note}</div>}
+                            {/* זמינים לא משובצים */}
+                            {employees.filter(e=>e.role==="רוקח"&&isAv(e.id,date,eveningShift.id)&&!phEvening.includes(e.id)).map(e=>(
+                              <div key={e.id} style={{padding:"1px 0",opacity:0.6}}>
+                                <span style={{fontSize:11,fontWeight:"500",color:"#0ea5e9",display:"block"}}>+ {e.name}</span>
+                                <span style={{fontSize:8,color:"#64748b"}}>{eveningShift.time}</span>
+                              </div>
+                            ))}
+                            {(eveningShift.slots["פרח"]||0)>0&&employees.filter(e=>e.role==="פרח"&&isAv(e.id,date,eveningShift.id)&&!frEvening.includes(e.id)).map(e=>(
+                              <div key={e.id} style={{padding:"1px 0",opacity:0.6}}>
+                                <span style={{fontSize:11,fontWeight:"500",color:"#a855f7",display:"block"}}>+ {e.name}</span>
+                                <span style={{fontSize:8,color:"#64748b"}}>{eveningShift.time}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -1323,94 +1501,112 @@ export default function App() {
               </div>
             )}
 
-            {weekDates.map(date=>{
-              const dayShifts=DAY_SHIFTS[date.getDay()]||[];
-              return (
-                <div key={dateKey(date)} style={S.card}>
-                  <div style={{fontWeight:"800",fontSize:13,marginBottom:10,display:"flex",justifyContent:"space-between"}}>
-                    {formatDate(date)}
-                    {isFirstOfMonth(date)&&<span style={{fontSize:11,color:"#b45309",fontWeight:"700"}}>🔒 סגירת סמים</span>}
-                  </div>
-                  {/* Manager remarks for this day */}
-                  <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:10}}>
-                    {REMARK_OPTIONS.map(remark=>{
-                      const active = getRemarks(date).includes(remark);
-                      return (
-                        <button key={remark}
-                          style={{border:`2px solid ${active?"#f59e0b":"#e2e8f0"}`,background:active?"#fef3c7":"#f8fafc",color:active?"#92400e":"#94a3b8",borderRadius:"8px",padding:"4px 10px",fontWeight:"700",fontSize:11,cursor:"pointer",userSelect:"none"}}
-                          onClick={()=>toggleRemark(date,remark)}>
-                          {active?"📌 ":"+ "}{remark}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {dayShifts.map(shift=>(
-                    <div key={shift.id} style={{marginBottom:12,paddingBottom:10,borderBottom:"1px solid #f1f5f9"}}>
-                      <div style={{fontWeight:"700",fontSize:12,color:"#475569",marginBottom:6,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                        <span>🕐 {shift.label} <span style={{fontWeight:"400",color:"#94a3b8"}}>{shift.time}</span></span>
-                      </div>
-                      {/* Free-text note for this shift */}
-                      <div style={{marginBottom:8}}>
-                        <input
-                          style={{...S.input,width:"100%",fontSize:12,padding:"6px 10px",boxSizing:"border-box",border:`1px solid ${getShiftNote(date,shift.id)?"#f59e0b":"#e2e8f0"}`,background:getShiftNote(date,shift.id)?"#fefce8":"#f8fafc"}}
-                          placeholder={`💬 הוסף הערה למשמרת ${shift.label}...`}
-                          value={getShiftNote(date,shift.id)}
-                          onChange={e=>setShiftNote(date,shift.id,e.target.value)}
-                        />
-                      </div>
-                      {ROLES.map(role=>{
-                        const needed=shift.slots[role]||0;
-                        if(!needed) return null;
-                        const assignedIds=getAssigned(date,shift.id,role);
-                        const avail=employees.filter(e=>e.role===role&&isAv(e.id,date,shift.id));
-                        const allShown=[...new Set([...avail.map(e=>e.id),...assignedIds])];
-                        const filled=assignedIds.length;
-                        return (
-                          <div key={role} style={{marginBottom:7,paddingRight:8,borderRight:`3px solid ${ROLE_COLORS[role]?.bg}`}}>
-                            <div style={{fontSize:11,display:"flex",alignItems:"center",gap:5,marginBottom:5}}>
-                              <span style={{fontWeight:"700",color:ROLE_COLORS[role]?.dark}}>{role}</span>
-                              <span style={{background:filled>=needed?"#dcfce7":"#fef3c7",color:filled>=needed?"#15803d":"#92400e",borderRadius:"20px",padding:"1px 7px",fontSize:10,fontWeight:"700"}}>{filled}/{needed}</span>
-                            </div>
-                            <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                              {/* Available employees — כחול=זמין, ירוק=משובץ */}
-                              {avail.map(emp=>{
-                                const isAss=assignedIds.includes(emp.id);
-                                return (
+            {/* Weekly assignment grid */}
+            <div style={{overflowX:"auto",marginBottom:12}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.08)",minWidth:500}}>
+                <thead>
+                  <tr style={{background:"#1e293b",color:"#f8fafc"}}>
+                    <th style={{padding:"8px",textAlign:"right",fontWeight:"600",minWidth:80,fontSize:11}}>משמרת</th>
+                    {weekDates.map(date=>(
+                      <th key={dateKey(date)} style={{padding:"8px 4px",textAlign:"center",fontWeight:"600",minWidth:80}}>
+                        <div style={{fontSize:11}}>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
+                        <div style={{fontSize:10,opacity:0.7}}>{formatDateShort(date)}</div>
+                        {isFirstOfMonth(date)&&<div style={{fontSize:9,color:"#fbbf24"}}>🔒</div>}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    {rowId:"morning", label:"בוקר", matchIds:["morning","open"]},
+                    {rowId:"evening", label:"ערב",  matchIds:["evening","close"]},
+                  ].map((group,gi)=>(
+                    ROLES.map((role,ri)=>(
+                      <tr key={`${group.rowId}_${role}`} style={{background:(gi*2+ri)%2===0?"#f8fafc":"#fff",borderBottom:"1px solid #e2e8f0"}}>
+                        <td style={{padding:"6px 8px",fontWeight:"700",color:ROLE_COLORS[role]?.dark,whiteSpace:"nowrap",fontSize:11,borderLeft:"3px solid "+ROLE_COLORS[role]?.bg}}>
+                          {group.label}<br/><span style={S.badge(role)}>{role}</span>
+                        </td>
+                        {weekDates.map(date=>{
+                          const shift=(DAY_SHIFTS[date.getDay()]||[]).find(s=>group.matchIds.includes(s.id)&&(s.slots[role]||0)>0);
+                          if(!shift) return <td key={dateKey(date)} style={{padding:"6px 4px",textAlign:"center",color:"#e2e8f0",background:"#f8fafc"}}>—</td>;
+                          const assignedIds=getAssigned(date,shift.id,role);
+                          const avail=employees.filter(e=>e.role===role&&isAv(e.id,date,shift.id));
+                          const nonAvail=employees.filter(e=>e.role===role&&!isAv(e.id,date,shift.id)&&!assignedIds.includes(e.id));
+                          const filled=assignedIds.length;
+                          const needed=shift.slots[role]||1;
+                          const isMissing=filled<needed;
+                          return (
+                            <td key={dateKey(date)} style={{padding:"4px",textAlign:"center",background:isMissing?"#fef2f2":"inherit",verticalAlign:"top",minWidth:80}}>
+                              {/* Shift note */}
+                              {getShiftNote(date,shift.id)&&<div style={{fontSize:9,color:"#92400e",background:"#fef3c7",borderRadius:3,padding:"1px 3px",marginBottom:2}}>💬</div>}
+                              {/* Missing indicator */}
+                              {isMissing&&<div style={{fontSize:9,color:"#ef4444",fontWeight:"700",marginBottom:2}}>⚠️ חסר</div>}
+                              {/* Assigned employees */}
+                              <div style={{display:"flex",flexDirection:"column",gap:2,marginBottom:2}}>
+                                {assignedIds.map(id=>{
+                                  const emp=employees.find(e=>e.id===id);
+                                  return (
+                                    <button key={id}
+                                      style={{background:"#dcfce7",border:"1.5px solid #22c55e",borderRadius:"6px",padding:"2px 4px",fontSize:10,fontWeight:"700",color:"#15803d",cursor:"pointer",width:"100%"}}
+                                      onClick={()=>toggleAssign(date,shift.id,role,id)}>
+                                      ✓ {emp?.name}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              {/* Available to assign */}
+                              <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                                {avail.filter(e=>!assignedIds.includes(e.id)).map(emp=>(
                                   <button key={emp.id}
-                                    style={S.empChip(isAss)}
+                                    style={{background:"#eff6ff",border:"1.5px solid #0ea5e9",borderRadius:"6px",padding:"2px 4px",fontSize:10,fontWeight:"600",color:"#0369a1",cursor:"pointer",width:"100%"}}
                                     onClick={()=>toggleAssign(date,shift.id,role,emp.id)}>
-                                    {isAss?"✓ ":"○ "}{emp.name}
-                                  </button>
-                                );
-                              })}
-                              {/* Non-available — מקווקו אפור. לחיצה = מוסיפה זמינות (לא שיבוץ) */}
-                              {employees.filter(e=>e.role===role&&!isAv(e.id,date,shift.id)).map(emp=>{
-                                const isAss=assignedIds.includes(emp.id);
-                                if(isAss) return null; // אם כבר משובץ — מופיע בכחול/ירוק למעלה
-                                return (
-                                  <button key={emp.id}
-                                    style={{...S.empChip(false), opacity:0.4, borderStyle:"dashed"}}
-                                    onClick={()=>{
-                                      // מוסיף זמינות בלבד — לא שיבוץ
-                                      const k = avKey(emp.id, date, shift.id);
-                                      setAvailability(prev=>({...prev,[k]:true}));
-                                      showToast(`${emp.name} סומן/ה כזמין/ה ✓`);
-                                    }}
-                                    title="לחץ להוספת זמינות">
                                     + {emp.name}
                                   </button>
-                                );
-                              })}
-                              {employees.filter(e=>e.role===role).length===0&&<span style={{color:"#94a3b8",fontSize:11}}>אין עובדים</span>}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                                ))}
+                                {nonAvail.map(emp=>(
+                                  <button key={emp.id}
+                                    style={{background:"transparent",border:"1px dashed #cbd5e1",borderRadius:"6px",padding:"2px 4px",fontSize:10,color:"#94a3b8",cursor:"pointer",width:"100%",opacity:0.6}}
+                                    onClick={()=>{const k=avKey(emp.id,date,shift.id);setAvailability(prev=>({...prev,[k]:true}));showToast(`${emp.name} סומן/ה כזמינ/ה ✓`);}}>
+                                    {emp.name}
+                                  </button>
+                                ))}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Shift notes row */}
+            <div style={S.card}>
+              <div style={S.sTitle}>💬 הערות משמרת + סימונים יומיים</div>
+              {weekDates.map(date=>(
+                <div key={dateKey(date)} style={{marginBottom:10}}>
+                  <div style={{fontSize:11,fontWeight:"700",color:"#475569",marginBottom:5}}>
+                    {date.toLocaleDateString("he-IL",{weekday:"short",day:"numeric",month:"numeric"})}
+                    {isFirstOfMonth(date)&&<span style={{color:"#b45309",marginRight:6}}>🔒 סגירת סמים</span>}
+                  </div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:5}}>
+                    {REMARK_OPTIONS.map(remark=>{
+                      const active=getRemarks(date).includes(remark);
+                      return <button key={remark} style={{border:`1.5px solid ${active?"#f59e0b":"#e2e8f0"}`,background:active?"#fef3c7":"#f8fafc",color:active?"#92400e":"#94a3b8",borderRadius:"6px",padding:"3px 8px",fontSize:11,cursor:"pointer"}} onClick={()=>toggleRemark(date,remark)}>{active?"📌 ":"+ "}{remark}</button>;
+                    })}
+                  </div>
+                  {(DAY_SHIFTS[date.getDay()]||[]).map(shift=>(
+                    <input key={shift.id}
+                      style={{...S.input,width:"100%",fontSize:11,padding:"5px 8px",boxSizing:"border-box",marginBottom:4,border:`1px solid ${getShiftNote(date,shift.id)?"#f59e0b":"#e2e8f0"}`}}
+                      placeholder={`הערה למשמרת ${shift.label}...`}
+                      value={getShiftNote(date,shift.id)}
+                      onChange={e=>setShiftNote(date,shift.id,e.target.value)}
+                    />
                   ))}
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
         )}
 
