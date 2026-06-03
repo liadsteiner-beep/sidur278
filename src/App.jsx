@@ -930,245 +930,19 @@ export default function App() {
             <button style={{...S.tab(empTab==="note"),flex:1,borderRadius:7,fontSize:11}} onClick={()=>setEmpTab("note")}>📝 הערה</button>
           </div>
 
-          {/* Published schedule tab */}
-          {empTab==="schedule" && published && (()=>{
-            const MOOD_EMOJIS = ["😏","😌","☺️","😃","😇","🤩","🥳"];
-            // Build ordered shift list with date objects
-            const myShiftList = [];
-            weekDates.forEach(date=>{
-              (DAY_SHIFTS[date.getDay()]||[]).forEach(sh=>{
-                if(getAssigned(date,sh.id,myRole).includes(currentUser.id)){
-                  const shiftLabel = ["morning","open"].includes(sh.id) ? "בוקר" : sh.id==="close" ? "סגירה" : "ערב";
-                  const shiftIcon = ["morning","open"].includes(sh.id) ? "☀️" : "🌙";
-                  myShiftList.push({date, sh, shiftLabel, shiftIcon});
-                }
-              });
-            });
-            const total = myShiftList.length;
-            const now = new Date();
-            const doneSoFar = myShiftList.filter(({date,sh})=>{
-              const [endH] = sh.time.split("-")[1]?.split(":").map(Number)||[23];
-              const endDate = new Date(date);
-              endDate.setHours(endH,0,0,0);
-              return endDate < now;
-            }).length;
-            const todayIdx = myShiftList.findIndex(({date,sh})=>{
-              const d = new Date(date);
-              const [startH] = sh.time.split(":").map(Number);
-              const [endH] = sh.time.split("-")[1]?.split(":").map(Number)||[23];
-              const start = new Date(date); start.setHours(startH,0,0,0);
-              const end = new Date(date); end.setHours(endH,0,0,0);
-              return now >= start && now <= end;
-            });
-            const moodIdx = total > 0 ? Math.round((doneSoFar / total) * (MOOD_EMOJIS.length - 1)) : 0;
-            const moodEmoji = total > 0 ? MOOD_EMOJIS[moodIdx] : "😏";
-            const ENCOURAGEMENTS = {
-              0: ["השבוע עוד לא התחיל... הקפה מוכן? ☕"],
-              1: ["משמרת אחת — כבר התחלת! הכי קשה זה להתחיל 💪"],
-              2: ["שתיים מאחוריך — קדימה! 💨"],
-              3: ["חצי דרך — את/ה עושה את זה! 💪","שלוש! הכי קשה מאחוריך 🙌","3 מ-5, לא רע בכלל 😎"],
-              4: ["עוד אחת ואת/ה שם! 🏁","ארבע! המשמרת האחרונה מחכה לך 👊","אפשר לראות את הסוף","אחת נשארה — היא לא מפחידה אותך 😤"],
-              5: ["סיימת! שבוע מושלם, כל הכבוד! 🎉","עשית את זה! אלופ/ה! 💊","שבוע שלם מאחוריך — מגיע/ה לך מנוחה 🛋️","5 מתוך 5 — מקצוען/ית! ⭐"],
-            };
-            const encPool = ENCOURAGEMENTS[Math.min(doneSoFar, 5)] || ENCOURAGEMENTS[5];
-            // Pick random based on week number for variety
-            const weekSeed = weekDates[0]?.getDate() || 0;
-            const encourage = encPool[weekSeed % encPool.length];
-            const isMe = id => id === currentUser.id;
-            return (
-              <div style={{marginBottom:12}}>
-                <style>{`.pub-hov { background: #bfdbfe !important; font-weight: 800 !important; border-radius:3px; transition: background 0.15s; } .pub-hov.my-s { background: #fde68a !important; }`}</style>
-
-                {/* Progress block */}
-                {total > 0 && (
-                  <div style={{...S.card, background:"var(--color-background-secondary, #f8fafc)", marginBottom:10}}>
-                    <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:12}}>
-                      <div style={{fontSize:42,lineHeight:1,flexShrink:0}}>{moodEmoji}</div>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:13,fontWeight:"700",color:"#1e293b",marginBottom:6}}>{encourage}</div>
-                        <div style={{height:8,background:"#e2e8f0",borderRadius:4,overflow:"hidden"}}>
-                          <div style={{height:"100%",width:`${(doneSoFar/total)*100}%`,background:"#1D9E75",borderRadius:4,transition:"width 0.5s ease"}}></div>
-                        </div>
-                        <div style={{fontSize:11,color:"#64748b",marginTop:4}}>{doneSoFar} מתוך {total} משמרות הושלמו</div>
-                      </div>
-                    </div>
-                    {/* Day dots */}
-                    <div style={{display:"flex",alignItems:"center",gap:4}}>
-                      {myShiftList.map(({date,sh,shiftLabel},i)=>{
-                        const endDate = new Date(date);
-                        const [endH] = sh.time.split("-")[1]?.split(":").map(Number)||[23];
-                        endDate.setHours(endH,0,0,0);
-                        const isDone = endDate < now;
-                        const isToday = i === todayIdx;
-                        const dotColor = isDone ? "#1D9E75" : isToday ? "#378ADD" : "var(--color-background-primary, #fff)";
-                        const dotBorder = isDone ? "#1D9E75" : isToday ? "#378ADD" : "#cbd5e1";
-                        const textColor = isDone||isToday ? "#fff" : "#94a3b8";
-                        return [
-                          <div key={`dot-${i}`} style={{width:28,height:28,borderRadius:"50%",background:dotColor,border:`1.5px solid ${dotBorder}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:isDone?13:10,color:textColor}}>
-                            {isDone ? "✓" : isToday ? "⏰" : date.toLocaleDateString("he-IL",{weekday:"narrow"})}
-                          </div>,
-                          i < myShiftList.length-1 && <div key={`line-${i}`} style={{flex:1,height:2,background:isDone?"#1D9E75":"#e2e8f0",borderRadius:1}}></div>
-                        ];
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Shift cards */}
-                {total > 0 ? myShiftList.map(({date,sh,shiftLabel,shiftIcon},i)=>{
-                  const endDate = new Date(date); const [endH] = sh.time.split("-")[1]?.split(":").map(Number)||[23]; endDate.setHours(endH,0,0,0);
-                  const startDate = new Date(date); const [startH] = sh.time.split(":").map(Number); startDate.setHours(startH,0,0,0);
-                  const isDone = endDate < now;
-                  const isToday = now >= startDate && now <= endDate;
-                  const empNote = getEmpShiftNote(currentUser.id,date,sh.id);
-                  return (
-                    <div key={i} style={{...S.card,opacity:isDone?0.6:1,border:isDone?"1.5px solid #22c55e":isToday?"1.5px solid #378ADD":"1px solid #e2e8f0",marginBottom:8,display:"flex",alignItems:"center",gap:12,background:isDone?"#f0fdf4":"#fff"}}>
-                      <div style={{width:36,height:36,borderRadius:8,background:isDone?"#dcfce7":["morning","open"].includes(sh.id)?"#FAEEDA":"#EEEDFE",display:"flex",alignItems:"center",justifyContent:"center",fontSize:isDone?22:18,flexShrink:0}}>{isDone?"✓":shiftIcon}</div>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:13,fontWeight:"500",color:isDone?"#15803d":"#1e293b"}}>{date.toLocaleDateString("he-IL",{weekday:"long"})} — {shiftLabel}</div>
-                        <div style={{fontSize:11,color:isDone?"#16a34a":"#64748b",marginTop:1}}>{sh.time}</div>
-                        {empNote&&<div style={{fontSize:11,color:"#64748b",fontStyle:"italic",marginTop:2}}>{empNote}</div>}
-                      </div>
-                      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                        <span style={{fontSize:18}}>{MOOD_EMOJIS[Math.round((i/(Math.max(total-1,1)))*(MOOD_EMOJIS.length-1))]}</span>
-                        <span style={{fontSize:11,padding:"2px 8px",borderRadius:20,fontWeight:"600",background:isDone?"#dcfce7":isToday?"#E6F1FB":"#f1f5f9",color:isDone?"#15803d":isToday?"#185FA5":"#94a3b8",border:isDone?"1.5px solid #22c55e":"none"}}>
-                          {isDone?"✓ הסתיים":isToday?"היום":"בקרוב"}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                }) : <div style={{...S.card,color:"#94a3b8",fontSize:13}}>לא שובצת השבוע</div>}
-                <div style={{...S.card,padding:0,overflow:"hidden"}}>
-                  <div style={{background:"#1D9E75",padding:"8px 12px",display:"flex",justifyContent:"space-between"}}>
-                    <span style={{color:"#f8fafc",fontWeight:"500",fontSize:13}}>💊 סידור עבודה</span>
-                    <span style={{color:"#22c55e",fontSize:11}}>✓ פורסם</span>
-                  </div>
-                  <div style={{overflowX:"auto"}}>
-                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,tableLayout:"fixed"}}>
-                      <thead>
-                        <tr style={{background:"#1D9E75",color:"#fff"}}>
-                          <th style={{padding:"7px 6px",width:72,border:"0.5px solid #0F6E56"}}></th>
-                          {weekDates.map(date=>(
-                            <th key={dateKey(date)} style={{padding:"7px 4px",textAlign:"center",fontWeight:"500",fontSize:13,border:"0.5px solid #0F6E56"}}>
-                              <div>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
-                              <div style={{fontSize:11,color:"#94a3b8",fontWeight:"400",marginTop:1}}>{formatDateShort(date)}</div>
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td style={{background:"#f8fafc",padding:"3px 6px",borderRight:"3px solid #1e293b",border:"0.5px solid #e2e8f0",fontSize:10,color:"#475569",verticalAlign:"middle",textAlign:"center"}}>📌</td>
-                          {weekDates.map(date=>{
-                            const remarks=getRemarks(date);
-                            return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:3,background:"#fff",verticalAlign:"middle",textAlign:"center"}}>
-                              {remarks.length>0&&<span style={{display:"inline-block",border:"1.5px solid #1e293b",borderRadius:4,padding:"2px 4px",fontSize:9,fontWeight:"500",color:"#1e293b",width:"100%"}}>{remarks.join(" | ")}</span>}
-                            </td>;
-                          })}
-                        </tr>
-                        {/* בוקר */}
-                        <tr>
-                          <td style={{background:"#f8fafc",padding:"6px 4px",borderRight:"3px solid #22c55e",border:"0.5px solid #e2e8f0",verticalAlign:"middle",textAlign:"center"}}>
-                            <span style={{fontSize:14}}>☀️</span><span style={{display:"block",fontSize:12,fontWeight:"500",color:"#1e293b"}}>בוקר</span>
-                          </td>
-                          {weekDates.map(date=>{
-                            const ds=DAY_SHIFTS[date.getDay()]||[];
-                            const ms=ds.find(s=>["morning","open"].includes(s.id));
-                            const cs=ds.find(s=>s.id==="close");
-                            const phM=ms?getAssigned(date,ms.id,"רוקח"):[];
-                            const phC=cs?getAssigned(date,cs.id,"רוקח"):[];
-                            const frM=ms?getAssigned(date,ms.id,"פרח"):[];
-                            const phAll=[...phM.map(id=>({id,shift:ms})),...phC.map(id=>({id,shift:cs}))];
-                            const note=ms?getShiftNote(date,ms.id):"";
-                            return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:4,verticalAlign:"top",background:"#fff"}}>
-                              {!ms&&!cs?<span style={{color:"#e2e8f0",fontSize:10}}>—</span>:(
-                                <div style={{textAlign:"right"}}>
-                                  {phAll.map(({id,shift})=>{const emp=employees.find(e=>e.id===id); return <div key={id} style={{cursor:"default"}}
-                                    onMouseEnter={()=>document.querySelectorAll(`.pe-${id}`).forEach(el=>el.classList.add("pub-hov"))}
-                                    onMouseLeave={()=>document.querySelectorAll(`.pe-${id}`).forEach(el=>el.classList.remove("pub-hov"))}>
-                                    <span className={`pe-${id}${isMe(id)?" my-s":""}`} style={{fontSize:12,fontWeight:isMe(id)?"700":"500",color:isMe(id)?"#92400e":"#0369a1",display:"block",padding:"1px 2px",borderRadius:3,background:isMe(id)?"#fef9c3":"transparent"}}>{emp?.name}{isMe(id)?" ⭐":""}</span>
-                                    <span style={{fontSize:8,color:"#64748b"}}>{shift?.time}</span>
-                                    {getEmpShiftNote(id,date,shift?.id)&&<span style={{fontSize:9,color:"#475569",display:"block",fontStyle:"italic"}}>{getEmpShiftNote(id,date,shift?.id)}</span>}
-                                  </div>;})}
-                                  {frM.length>0&&phAll.length>0&&<div style={{height:1,background:"#e2e8f0",margin:"3px 0"}}></div>}
-                                  {frM.map(id=>{const emp=employees.find(e=>e.id===id); return <div key={id} style={{cursor:"default"}}
-                                    onMouseEnter={()=>document.querySelectorAll(`.pe-${id}`).forEach(el=>el.classList.add("pub-hov"))}
-                                    onMouseLeave={()=>document.querySelectorAll(`.pe-${id}`).forEach(el=>el.classList.remove("pub-hov"))}>
-                                    <span className={`pe-${id}${isMe(id)?" my-s":""}`} style={{fontSize:12,fontWeight:isMe(id)?"700":"500",color:isMe(id)?"#92400e":"#7e22ce",display:"block",padding:"1px 2px",borderRadius:3,background:isMe(id)?"#fef9c3":"transparent"}}>{emp?.name}{isMe(id)?" ⭐":""}</span>
-                                    <span style={{fontSize:8,color:"#64748b"}}>{ms?.time}</span>
-                                    {getEmpShiftNote(id,date,ms?.id)&&<span style={{fontSize:9,color:"#475569",display:"block",fontStyle:"italic"}}>{getEmpShiftNote(id,date,ms?.id)}</span>}
-                                  </div>;})}
-                                  {note&&<div style={{fontSize:9,color:"#1e293b",marginTop:3,borderTop:"0.5px solid #e2e8f0",paddingTop:2}}>{note}</div>}
-                                </div>
-                              )}
-                            </td>;
-                          })}
-                        </tr>
-                        <tr><td colSpan={weekDates.length+1} style={{background:"#1e293b",height:4,padding:0,border:"none"}}></td></tr>
-                        {/* ערב */}
-                        <tr>
-                          <td style={{background:"#f8fafc",padding:"6px 4px",borderRight:"3px solid #6366f1",border:"0.5px solid #e2e8f0",verticalAlign:"middle",textAlign:"center"}}>
-                            <span style={{fontSize:14}}>🌙</span><span style={{display:"block",fontSize:12,fontWeight:"500",color:"#1e293b"}}>ערב</span>
-                          </td>
-                          {weekDates.map(date=>{
-                            const ds=DAY_SHIFTS[date.getDay()]||[];
-                            const es=ds.find(s=>s.id==="evening");
-                            if(!es) return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",background:"#f8fafc",textAlign:"center",color:"#e2e8f0",fontSize:10}}>—</td>;
-                            const phE=getAssigned(date,es.id,"רוקח");
-                            const frE=getAssigned(date,es.id,"פרח");
-                            const note=getShiftNote(date,es.id);
-                            return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:4,verticalAlign:"top",background:"#fff"}}>
-                              <div style={{textAlign:"right"}}>
-                                {phE.map(id=>{const emp=employees.find(e=>e.id===id); return <div key={id} style={{cursor:"default"}}
-                                  onMouseEnter={()=>document.querySelectorAll(`.pe-${id}`).forEach(el=>el.classList.add("pub-hov"))}
-                                  onMouseLeave={()=>document.querySelectorAll(`.pe-${id}`).forEach(el=>el.classList.remove("pub-hov"))}>
-                                  <span className={`pe-${id}${isMe(id)?" my-s":""}`} style={{fontSize:12,fontWeight:isMe(id)?"700":"500",color:isMe(id)?"#92400e":"#0369a1",display:"block",padding:"1px 2px",borderRadius:3,background:isMe(id)?"#fef9c3":"transparent"}}>{emp?.name}{isMe(id)?" ⭐":""}</span>
-                                  <span style={{fontSize:8,color:"#64748b"}}>{es.time}</span>
-                                  {getEmpShiftNote(id,date,es.id)&&<span style={{fontSize:9,color:"#475569",display:"block",fontStyle:"italic"}}>{getEmpShiftNote(id,date,es.id)}</span>}
-                                </div>;})}
-                                {frE.length>0&&phE.length>0&&<div style={{height:1,background:"#e2e8f0",margin:"3px 0"}}></div>}
-                                {frE.map(id=>{const emp=employees.find(e=>e.id===id); return <div key={id} style={{cursor:"default"}}
-                                  onMouseEnter={()=>document.querySelectorAll(`.pe-${id}`).forEach(el=>el.classList.add("pub-hov"))}
-                                  onMouseLeave={()=>document.querySelectorAll(`.pe-${id}`).forEach(el=>el.classList.remove("pub-hov"))}>
-                                  <span className={`pe-${id}${isMe(id)?" my-s":""}`} style={{fontSize:12,fontWeight:isMe(id)?"700":"500",color:isMe(id)?"#92400e":"#7e22ce",display:"block",padding:"1px 2px",borderRadius:3,background:isMe(id)?"#fef9c3":"transparent"}}>{emp?.name}{isMe(id)?" ⭐":""}</span>
-                                  <span style={{fontSize:8,color:"#64748b"}}>{es.time}</span>
-                                  {getEmpShiftNote(id,date,es.id)&&<span style={{fontSize:9,color:"#475569",display:"block",fontStyle:"italic"}}>{getEmpShiftNote(id,date,es.id)}</span>}
-                                </div>;})}
-                                {note&&<div style={{fontSize:9,color:"#1e293b",marginTop:3,borderTop:"0.5px solid #e2e8f0",paddingTop:2}}>{note}</div>}
-                              </div>
-                            </td>;
-                          })}
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
 
           {/* Mobile schedule — single scrollable table */}
           {empTab==="schedule" && published && (
             <div style={{marginTop:4}}>
               <style>{`
                 @keyframes rotSpin { 0%,100%{transform:rotate(0deg)} 40%{transform:rotate(90deg)} 60%{transform:rotate(90deg)} }
-                .sched-rotate-tip { display:flex; }
+                .sched-rotate-tip { display:none; }
                 .sched-scroll-wrap { overflow-x:auto; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.08); touch-action:pan-x pan-y pinch-zoom; }
                 @media (orientation: landscape) {
-                  .sched-rotate-tip { display:none !important; }
                   .sched-scroll-wrap { overflow-x:visible; }
                   .sched-scroll-wrap table { min-width:unset !important; width:100%; }
                 }
               `}</style>
-              {/* Rotate tip */}
-              <div className="sched-rotate-tip" style={{alignItems:"center",gap:8,background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:"8px 12px",marginBottom:8}}>
-                <span style={{fontSize:20,display:"inline-block",animation:"rotSpin 2s ease-in-out infinite"}}>🔄</span>
-                <div>
-                  <div style={{fontSize:12,fontWeight:"500",color:"#0369a1"}}>סובב למסך מלא</div>
-                  <div style={{fontSize:11,color:"#64748b"}}>או צבוט להקטנה / הגדלה</div>
-                </div>
-              </div>
-              <div style={{fontSize:11,color:"#94a3b8",marginBottom:6,textAlign:"center"}}>← גלול לראות את כל השבוע</div>
               <div className="sched-scroll-wrap" ref={el=>{
                 if(!el||el._pz) return; el._pz=true;
                 let scale=1,lastDist=null;
@@ -1185,7 +959,7 @@ export default function App() {
                 <table style={{borderCollapse:"collapse",fontSize:11,minWidth:600,background:"#fff"}}>
                   <thead>
                     <tr style={{background:"#1D9E75",color:"#fff"}}>
-                      <th style={{padding:"8px 8px",border:"0.5px solid #0F6E56",width:72,textAlign:"center",fontSize:10,fontWeight:"500",position:"sticky",right:0,background:"#1D9E75",zIndex:2}}></th>
+                      <th style={{padding:"8px 8px",border:"0.5px solid #0F6E56",width:52,textAlign:"center",fontSize:10,fontWeight:"500",position:"sticky",right:0,background:"#1D9E75",zIndex:2}}></th>
                       {weekDates.map(date=>{
                         const midnight=new Date(date); midnight.setHours(23,59,59,0);
                         const isPast=midnight<new Date();
@@ -1211,9 +985,9 @@ export default function App() {
                     </tr>
                     {/* בוקר */}
                     <tr>
-                      <td style={{background:"#f8fafc",padding:"8px 4px",borderRight:"3px solid #22c55e",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",right:0,zIndex:1}}>
-                        <span style={{fontSize:14}}>☀️</span>
-                        <span style={{display:"block",fontSize:10,fontWeight:"500",color:"#1e293b"}}>בוקר</span>
+                      <td style={{background:"#f0fdf4",padding:"6px 3px",borderRight:"3px solid #22c55e",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",right:0,zIndex:1}}>
+                        <span style={{fontSize:16}}>☀️</span>
+                        <span style={{display:"block",fontSize:9,fontWeight:"600",color:"#15803d",marginTop:2}}>בוקר</span>
                       </td>
                       {weekDates.map(date=>{
                         const ds=DAY_SHIFTS[date.getDay()]||[];
@@ -1251,9 +1025,9 @@ export default function App() {
                     <tr><td colSpan={weekDates.length+1} style={{background:"#1e293b",height:4,padding:0,border:"none"}}></td></tr>
                     {/* ערב */}
                     <tr>
-                      <td style={{background:"#f8fafc",padding:"8px 4px",borderRight:"3px solid #6366f1",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",right:0,zIndex:1}}>
-                        <span style={{fontSize:14}}>🌙</span>
-                        <span style={{display:"block",fontSize:10,fontWeight:"500",color:"#1e293b"}}>ערב</span>
+                      <td style={{background:"#f5f3ff",padding:"6px 3px",borderRight:"3px solid #6366f1",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",right:0,zIndex:1}}>
+                        <span style={{fontSize:16}}>🌙</span>
+                        <span style={{display:"block",fontSize:9,fontWeight:"600",color:"#4338ca",marginTop:2}}>ערב</span>
                       </td>
                       {weekDates.map(date=>{
                         const ds=DAY_SHIFTS[date.getDay()]||[];
@@ -1288,7 +1062,100 @@ export default function App() {
                   </tbody>
                 </table>
               </div>
-              <div style={{fontSize:10,color:"#94a3b8",textAlign:"center",marginTop:6}}>לחצי על משמרת לפרטים מלאים</div>
+              <div style={{fontSize:10,color:"#94a3b8",textAlign:"center",marginTop:6}}>לחצי על משמרת לפרטים • סובב לתצוגה מלאה</div>
+
+              {/* ── רשימת המשמרות שלי ── */}
+              {(()=>{
+                const MOOD_EMOJIS = ["😏","😌","☺️","😃","😇","🤩","🥳"];
+                const myShiftList = [];
+                weekDates.forEach(date=>{
+                  (DAY_SHIFTS[date.getDay()]||[]).forEach(sh=>{
+                    if(getAssigned(date,sh.id,myRole).includes(currentUser.id)){
+                      const shiftLabel = ["morning","open"].includes(sh.id)?"בוקר":sh.id==="close"?"סגירה":"ערב";
+                      const shiftIcon  = ["morning","open"].includes(sh.id)?"☀️":"🌙";
+                      myShiftList.push({date,sh,shiftLabel,shiftIcon});
+                    }
+                  });
+                });
+                const total = myShiftList.length;
+                const now = new Date();
+                const doneSoFar = myShiftList.filter(({date,sh})=>{
+                  const endH=(sh.time.split("-")[1]?.split(":").map(Number)||[23])[0];
+                  const endDate=new Date(date); endDate.setHours(endH,0,0,0);
+                  return endDate<now;
+                }).length;
+                const ENCOURAGEMENTS = {
+                  0:["השבוע עוד לא התחיל... הקפה מוכן? ☕"],
+                  1:["משמרת אחת — כבר התחלת! הכי קשה זה להתחיל 💪"],
+                  2:["שתיים מאחוריך — קדימה! 💨"],
+                  3:["חצי דרך — את/ה עושה את זה! 💪","שלוש! הכי קשה מאחוריך 🙌","3 מ-5, לא רע בכלל 😎"],
+                  4:["עוד אחת ואת/ה שם! 🏁","ארבע! המשמרת האחרונה מחכה לך 👊","אפשר לראות את הסוף","אחת נשארה — היא לא מפחידה אותך 😤"],
+                  5:["סיימת! שבוע מושלם, כל הכבוד! 🎉","עשית את זה! אלופ/ה! 💊","שבוע שלם מאחוריך — מגיע/ה לך מנוחה 🛋️","5 מתוך 5 — מקצוען/ית! ⭐"],
+                };
+                const encPool=ENCOURAGEMENTS[Math.min(doneSoFar,5)]||ENCOURAGEMENTS[5];
+                const weekSeed=weekDates[0]?.getDate()||0;
+                const encourage=encPool[weekSeed%encPool.length];
+                const moodIdx=total>0?Math.round((doneSoFar/total)*(MOOD_EMOJIS.length-1)):0;
+                const moodEmoji=total>0?MOOD_EMOJIS[moodIdx]:"😏";
+                if(!total) return null;
+                return (
+                  <div style={{marginTop:16}}>
+                    {/* Shift cards */}
+                    <div style={{fontWeight:"700",fontSize:13,color:"#475569",marginBottom:8}}>⭐ המשמרות שלי</div>
+                    {myShiftList.map(({date,sh,shiftLabel,shiftIcon},i)=>{
+                      const endDate=new Date(date); const [endH]=(sh.time.split("-")[1]?.split(":").map(Number)||[23]); endDate.setHours(endH,0,0,0);
+                      const startDate=new Date(date); const [startH]=sh.time.split(":").map(Number); startDate.setHours(startH,0,0,0);
+                      const isDone=endDate<now;
+                      const isToday=now>=startDate&&now<=endDate;
+                      const empNote=getEmpShiftNote(currentUser.id,date,sh.id);
+                      return (
+                        <div key={i} style={{...S.card,opacity:isDone?0.6:1,border:isDone?"1.5px solid #22c55e":isToday?"1.5px solid #378ADD":"1px solid #e2e8f0",marginBottom:8,display:"flex",alignItems:"center",gap:12,background:isDone?"#f0fdf4":"#fff"}}>
+                          <div style={{width:36,height:36,borderRadius:8,background:isDone?"#dcfce7":["morning","open"].includes(sh.id)?"#FAEEDA":"#EEEDFE",display:"flex",alignItems:"center",justifyContent:"center",fontSize:isDone?22:18,flexShrink:0}}>{isDone?"✓":shiftIcon}</div>
+                          <div style={{flex:1}}>
+                            <div style={{fontSize:13,fontWeight:"500",color:isDone?"#15803d":"#1e293b"}}>{date.toLocaleDateString("he-IL",{weekday:"long"})} — {shiftLabel}</div>
+                            <div style={{fontSize:11,color:isDone?"#16a34a":"#64748b",marginTop:1}}>{sh.time}</div>
+                            {empNote&&<div style={{fontSize:11,color:"#64748b",fontStyle:"italic",marginTop:2}}>{empNote}</div>}
+                          </div>
+                          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                            <span style={{fontSize:18}}>{MOOD_EMOJIS[Math.round((i/(Math.max(total-1,1)))*(MOOD_EMOJIS.length-1))]}</span>
+                            <span style={{fontSize:10,padding:"2px 7px",borderRadius:20,fontWeight:"600",background:isDone?"#dcfce7":isToday?"#E6F1FB":"#f1f5f9",color:isDone?"#15803d":isToday?"#185FA5":"#94a3b8",border:isDone?"1.5px solid #22c55e":"none"}}>
+                              {isDone?"✓ הסתיים":isToday?"היום":"בקרוב"}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Progress bar */}
+                    <div style={{...S.card,background:"#f8fafc",marginTop:8}}>
+                      <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:10}}>
+                        <div style={{fontSize:40,lineHeight:1,flexShrink:0}}>{moodEmoji}</div>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:13,fontWeight:"500",color:"#1e293b",marginBottom:5}}>{encourage}</div>
+                          <div style={{height:7,background:"#e2e8f0",borderRadius:4,overflow:"hidden"}}>
+                            <div style={{height:"100%",width:`${(doneSoFar/total)*100}%`,background:"#1D9E75",borderRadius:4,transition:"width 0.5s ease"}}></div>
+                          </div>
+                          <div style={{fontSize:11,color:"#64748b",marginTop:3}}>{doneSoFar} מתוך {total} הושלמו</div>
+                        </div>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:4}}>
+                        {myShiftList.map(({date,sh},i)=>{
+                          const endDate=new Date(date); const [endH]=(sh.time.split("-")[1]?.split(":").map(Number)||[23]); endDate.setHours(endH,0,0,0);
+                          const startDate=new Date(date); const [startH]=sh.time.split(":").map(Number); startDate.setHours(startH,0,0,0);
+                          const isDone=endDate<now;
+                          const isToday=now>=startDate&&now<=endDate;
+                          return [
+                            <div key={`d${i}`} style={{width:24,height:24,borderRadius:"50%",background:isDone?"#1D9E75":isToday?"#378ADD":"#fff",border:`1.5px solid ${isDone?"#1D9E75":isToday?"#378ADD":"#e2e8f0"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:isDone?11:10,color:isDone||isToday?"#fff":"#94a3b8"}}>
+                              {isDone?"✓":isToday?"⏰":date.toLocaleDateString("he-IL",{weekday:"narrow"})}
+                            </div>,
+                            i<myShiftList.length-1&&<div key={`l${i}`} style={{flex:1,height:2,background:isDone?"#1D9E75":"#e2e8f0",borderRadius:1}}></div>
+                          ];
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
           {(empTab==="avail" || !published) && (
@@ -1721,7 +1588,7 @@ export default function App() {
               <table style={{borderCollapse:"collapse",fontSize:11,minWidth:580,background:"#fff"}}>
                 <thead>
                   <tr style={{background:"#1D9E75",color:"#fff"}}>
-                    <th style={{padding:"9px 6px",border:"0.5px solid #0F6E56",width:68,textAlign:"center",fontSize:10,fontWeight:"500",position:"sticky",right:0,background:"#1D9E75",zIndex:2}}></th>
+                    <th style={{padding:"9px 6px",border:"0.5px solid #0F6E56",width:52,textAlign:"center",fontSize:10,fontWeight:"500",position:"sticky",right:0,background:"#1D9E75",zIndex:2}}></th>
                     {weekDates.map(date=>(
                       <th key={dateKey(date)} style={{padding:"9px 6px",border:"0.5px solid #0F6E56",textAlign:"center",minWidth:90,whiteSpace:"nowrap"}}>
                         <div style={{fontSize:12,fontWeight:"600"}}>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
@@ -1743,9 +1610,9 @@ export default function App() {
                   </tr>
                   {/* בוקר */}
                   <tr>
-                    <td style={{background:"#f8fafc",padding:"8px 4px",borderRight:"3px solid #22c55e",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",right:0,zIndex:1}}>
-                      <span style={{fontSize:14}}>☀️</span>
-                      <span style={{display:"block",fontSize:10,fontWeight:"500",color:"#1e293b"}}>בוקר</span>
+                    <td style={{background:"#f0fdf4",padding:"6px 3px",borderRight:"3px solid #22c55e",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",right:0,zIndex:1}}>
+                      <span style={{fontSize:16}}>☀️</span>
+                      <span style={{display:"block",fontSize:9,fontWeight:"600",color:"#15803d",marginTop:2}}>בוקר</span>
                     </td>
                     {weekDates.map(date=>{
                       const ds=DAY_SHIFTS[date.getDay()]||[];
@@ -1782,9 +1649,9 @@ export default function App() {
                   <tr><td colSpan={weekDates.length+1} style={{background:"#1e293b",height:4,padding:0,border:"none"}}></td></tr>
                   {/* ערב */}
                   <tr>
-                    <td style={{background:"#f8fafc",padding:"8px 4px",borderRight:"3px solid #6366f1",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",right:0,zIndex:1}}>
-                      <span style={{fontSize:14}}>🌙</span>
-                      <span style={{display:"block",fontSize:10,fontWeight:"500",color:"#1e293b"}}>ערב</span>
+                    <td style={{background:"#f5f3ff",padding:"6px 3px",borderRight:"3px solid #6366f1",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",right:0,zIndex:1}}>
+                      <span style={{fontSize:16}}>🌙</span>
+                      <span style={{display:"block",fontSize:9,fontWeight:"600",color:"#4338ca",marginTop:2}}>ערב</span>
                     </td>
                     {weekDates.map(date=>{
                       const ds=DAY_SHIFTS[date.getDay()]||[];
