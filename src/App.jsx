@@ -719,7 +719,54 @@ export default function App() {
     return t;
   }
 
-  function buildReminderText() {
+  function buildImageHTML() {
+    const days = weekDates.map(date=>({
+      label: date.toLocaleDateString("he-IL",{weekday:"long"}),
+      date: formatDateShort(date),
+      dayObj: date,
+    }));
+    const colW = Math.floor((1600-120)/7);
+    const empCell = (emps, note) => {
+      let h="";
+      emps.forEach((emp,j)=>{
+        if(j>0) h+=`<div style="height:3px;background:#e2e8f0;margin:8px 0;"></div>`;
+        h+=`<div style="padding:5px 7px;"><span style="font-size:28px;font-weight:700;color:#1e293b;display:block;">${emp.name}${emp.label?` <span style="font-size:18px;color:#64748b;">(${emp.label})</span>`:""}</span><span style="font-size:20px;color:#64748b;display:block;margin-top:3px;">${emp.time}</span>${emp.note?`<span style="font-size:17px;color:#475569;font-style:italic;display:block;margin-top:4px;">${emp.note}</span>`:""}</div>`;
+      });
+      if(note) h+=`<div style="font-size:18px;color:#92400e;background:#fef3c7;border-radius:6px;padding:6px 10px;margin-top:6px;">📋 ${note}</div>`;
+      return h;
+    };
+    let html=`<div style="background:#1D9E75;padding:22px 28px;display:flex;justify-content:space-between;align-items:center;"><span style="color:#fff;font-size:30px;font-weight:700;">💊 ${APP_NAME}</span><span style="color:#E1F5EE;font-size:20px;">✓ פורסם | ${formatDateShort(weekDates[0])}–${formatDateShort(weekDates[6])}</span></div>`;
+    html+=`<table style="border-collapse:collapse;width:100%;table-layout:fixed;"><thead><tr style="background:#1D9E75;color:#fff;"><th style="width:120px;padding:16px 8px;border:1px solid #0F6E56;"></th>${days.map(d=>`<th style="width:${colW}px;padding:16px 6px;border:1px solid #0F6E56;font-size:20px;font-weight:700;text-align:center;">${d.label}<br><span style="font-size:16px;opacity:0.8;font-weight:400;">${d.date}</span></th>`).join("")}</tr></thead><tbody>`;
+    // Morning
+    html+=`<tr><td style="background:#f0fdf4;padding:16px 6px;border-right:6px solid #22c55e;border:1px solid #e2e8f0;text-align:center;"><div style="font-size:34px;">☀️</div><div style="font-size:18px;font-weight:700;color:#15803d;margin-top:4px;">בוקר</div></td>`;
+    days.forEach(({dayObj})=>{
+      const ds=DAY_SHIFTS[dayObj.getDay()]||[];
+      const ms=ds.find(s=>["morning","open"].includes(s.id));
+      const cs=ds.find(s=>s.id==="close");
+      if(!ms&&!cs){html+=`<td style="border:1px solid #e2e8f0;background:#f8fafc;text-align:center;color:#d1d5db;font-size:22px;">—</td>`;return;}
+      const emps=[
+        ...(ms?getAssigned(dayObj,ms.id,"רוקח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:ms.time,note:getEmpShiftNote(id,dayObj,ms.id)})):[]),
+        ...(cs?getAssigned(dayObj,cs.id,"רוקח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:cs.time,label:"סגירה",note:getEmpShiftNote(id,dayObj,cs.id)})):[]),
+        ...(ms?getAssigned(dayObj,ms.id,"פרח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:ms.time,note:getEmpShiftNote(id,dayObj,ms.id)})):[]),
+      ];
+      html+=`<td style="border:1px solid #e2e8f0;padding:8px;vertical-align:top;background:#fff;">${empCell(emps,ms?getShiftNote(dayObj,ms.id):"")}</td>`;
+    });
+    html+=`</tr><tr><td colspan="8" style="background:#1e293b;height:6px;padding:0;border:none;"></td></tr>`;
+    // Evening
+    html+=`<tr><td style="background:#f5f3ff;padding:16px 6px;border-right:6px solid #6366f1;border:1px solid #e2e8f0;text-align:center;"><div style="font-size:34px;">🌙</div><div style="font-size:18px;font-weight:700;color:#4338ca;margin-top:4px;">ערב</div></td>`;
+    days.forEach(({dayObj})=>{
+      const ds=DAY_SHIFTS[dayObj.getDay()]||[];
+      const es=ds.find(s=>s.id==="evening");
+      if(!es){html+=`<td style="border:1px solid #e2e8f0;background:#f8fafc;text-align:center;color:#d1d5db;font-size:22px;">—</td>`;return;}
+      const emps=[
+        ...getAssigned(dayObj,es.id,"רוקח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:es.time,note:getEmpShiftNote(id,dayObj,es.id)})),
+        ...getAssigned(dayObj,es.id,"פרח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:es.time,note:getEmpShiftNote(id,dayObj,es.id)})),
+      ];
+      html+=`<td style="border:1px solid #e2e8f0;padding:8px;vertical-align:top;background:#fff;">${empCell(emps,getShiftNote(dayObj,es.id))}</td>`;
+    });
+    html+=`</tr></tbody></table>`;
+    return html;
+  }
     return `💊 ${APP_NAME}\nתזכורת: נא להשתבץ לשבוע ${formatDateShort(weekDates[0])}–${formatDateShort(weekDates[6])} עד יום שלישי 12:00\nפתח/י את האפליקציה ורשום/י זמינות.`;
   }
 
@@ -1885,9 +1932,51 @@ export default function App() {
                 <button style={{...S.btn(published?"#22c55e":"#0ea5e9"),padding:12,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={()=>{setPublished(true);showToast("פורסם ✓");}}>
                   {published?"✓ פורסם באפליקציה":"✅ פרסם באפליקציה לעובדים"}
                 </button>
-                {/* Full schedule whatsapp */}
-                <button style={{...S.btn("#25D366"),padding:12,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={()=>window.open(`https://wa.me/?text=${encodeURIComponent(buildScheduleText())}`,"_blank")}>📱 שלח סידור מלא בווצאפ</button>
-                <button style={{...S.btnOut(),padding:10,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={()=>navigator.clipboard.writeText(buildScheduleText()).then(()=>showToast("הועתק"))}>📋 העתק סידור מלא</button>
+                {/* Download & Share image */}
+                <div style={{display:"flex",gap:8}}>
+                  <button style={{flex:1,...S.btn("#085041"),padding:12,fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}
+                    onClick={async()=>{
+                      const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
+                      const wrap = document.getElementById("mgr-sched-capture");
+                      if(!wrap){showToast("גלול לסימולציה תחילה","err");return;}
+                      const container = document.createElement("div");
+                      container.style.cssText="position:absolute;top:0;left:-9999px;width:1600px;background:#fff;font-family:Segoe UI,Tahoma,sans-serif;direction:rtl;";
+                      container.innerHTML = buildImageHTML();
+                      document.body.appendChild(container);
+                      await new Promise(r=>setTimeout(r,200));
+                      const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1600,windowWidth:1600});
+                      document.body.removeChild(container);
+                      const link = document.createElement("a");
+                      link.download = "סידור-עבודה.png";
+                      link.href = canvas.toDataURL("image/png");
+                      link.click();
+                      showToast("הסידור נשמר כתמונה ✓");
+                    }}>
+                    ⬇️ הורד סידור
+                  </button>
+                  <button style={{flex:1,...S.btn("#25D366"),padding:12,fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}
+                    onClick={async()=>{
+                      const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
+                      const container = document.createElement("div");
+                      container.style.cssText="position:absolute;top:0;left:-9999px;width:1600px;background:#fff;font-family:Segoe UI,Tahoma,sans-serif;direction:rtl;";
+                      container.innerHTML = buildImageHTML();
+                      document.body.appendChild(container);
+                      await new Promise(r=>setTimeout(r,200));
+                      const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1600,windowWidth:1600});
+                      document.body.removeChild(container);
+                      canvas.toBlob(async blob=>{
+                        const file = new File([blob],"סידור.png",{type:"image/png"});
+                        if(navigator.share&&navigator.canShare({files:[file]})){
+                          await navigator.share({files:[file],title:"סידור עבודה"});
+                        } else {
+                          window.open(`https://wa.me/?text=${encodeURIComponent("סידור עבודה "+formatDateShort(weekDates[0])+" - "+formatDateShort(weekDates[6]))}`,"_blank");
+                        }
+                        showToast("נשלח לווצאפ ✓");
+                      });
+                    }}>
+                    📲 שתף
+                  </button>
+                </div>
               </div>
             </div>
 
