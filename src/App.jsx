@@ -771,6 +771,8 @@ export default function App() {
     html+=`</tr></tbody></table>`;
     return html;
   }
+
+  function buildReminderText() {
     return `💊 ${APP_NAME}\nתזכורת: נא להשתבץ לשבוע ${formatDateShort(weekDates[0])}–${formatDateShort(weekDates[6])} עד יום שלישי 12:00\nפתח/י את האפליקציה ורשום/י זמינות.`;
   }
 
