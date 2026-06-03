@@ -1692,17 +1692,40 @@ export default function App() {
               </div>
             )}
 
-            {/* Weekly table — new grid design */}
-            <div style={{overflowX:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,background:"#fff",tableLayout:"fixed"}}>
+            {/* Weekly table — scrollable with emp highlight */}
+            <style>{`
+              .sim-emp { padding:2px 3px; border-radius:4px; margin-bottom:2px; cursor:pointer; transition:all 0.12s; }
+              .sim-emp.hov { background:#dbeafe !important; outline:1.5px solid #3b82f6; }
+              .sim-emp.hov .sim-name { color:#1d4ed8 !important; font-weight:700 !important; }
+              .sim-emp.dim { opacity:0.18; }
+              .sim-scroll { overflow-x:auto; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.08); touch-action:pan-x pan-y pinch-zoom; }
+            `}</style>
+            <div style={{fontSize:11,color:"#64748b",marginBottom:6,display:"flex",alignItems:"center",gap:8,background:"#f8fafc",border:"0.5px solid #e2e8f0",borderRadius:8,padding:"6px 10px"}}>
+              <span style={{fontSize:13}}>👆</span>
+              <span>לחצי על שם להדגשת כל משמרותיו/ה</span>
+              {hoveredEmp && <button style={{marginRight:"auto",padding:"2px 8px",border:"0.5px solid #e2e8f0",borderRadius:6,background:"#fff",fontSize:11,color:"#64748b",cursor:"pointer"}} onClick={()=>setHoveredEmp(null)}>ניקוי</button>}
+            </div>
+            <div className="sim-scroll" ref={el=>{
+              if(!el||el._pz) return; el._pz=true;
+              let scale=1,last=null;
+              el.addEventListener('touchstart',e=>{if(e.touches.length===2)last=null;},{passive:true});
+              el.addEventListener('touchmove',e=>{
+                if(e.touches.length!==2)return;
+                const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;
+                const d=Math.sqrt(dx*dx+dy*dy);
+                if(last){scale*=d/last;scale=Math.max(0.4,Math.min(2.5,scale));el.style.transform=`scale(${scale})`;el.style.transformOrigin='top right';}
+                last=d;
+              },{passive:true});
+              el.addEventListener('touchend',()=>{last=null;},{passive:true});
+            }}>
+              <table style={{borderCollapse:"collapse",fontSize:11,minWidth:580,background:"#fff"}}>
                 <thead>
                   <tr style={{background:"#1e293b",color:"#e2e8f0"}}>
-                    <th style={{padding:"8px",textAlign:"right",fontWeight:"500",width:80,fontSize:12}}>משמרת</th>
+                    <th style={{padding:"9px 6px",border:"0.5px solid #334155",width:68,textAlign:"center",fontSize:10,fontWeight:"500",position:"sticky",right:0,background:"#1e293b",zIndex:2}}></th>
                     {weekDates.map(date=>(
-                      <th key={dateKey(date)} style={{padding:"8px 4px",textAlign:"center",fontWeight:"500",fontSize:13,border:"0.5px solid #334155"}}>
-                        <div>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
-                        <div style={{fontSize:11,color:"#94a3b8",fontWeight:"400",marginTop:2}}>{formatDateShort(date)}</div>
-                        {isFirstOfMonth(date)&&<div style={{fontSize:9,color:"#fbbf24"}}>🔒</div>}
+                      <th key={dateKey(date)} style={{padding:"9px 6px",border:"0.5px solid #334155",textAlign:"center",minWidth:90,whiteSpace:"nowrap"}}>
+                        <div style={{fontSize:12,fontWeight:"600"}}>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
+                        <div style={{fontSize:11,color:"#94a3b8",fontWeight:"400",marginTop:1}}>{formatDateShort(date)}</div>
                       </th>
                     ))}
                   </tr>
@@ -1710,185 +1733,94 @@ export default function App() {
                 <tbody>
                   {/* הערות יום */}
                   <tr>
-                    <td style={{background:"#f8fafc",padding:"4px 6px",borderRight:"3px solid #1e293b",border:"0.5px solid #e2e8f0",fontSize:10,color:"#475569",verticalAlign:"middle",textAlign:"center"}}>📌</td>
+                    <td style={{background:"#f8fafc",padding:"3px 6px",borderRight:"3px solid #1e293b",border:"0.5px solid #e2e8f0",fontSize:9,color:"#475569",textAlign:"center",position:"sticky",right:0,zIndex:1}}>📌</td>
                     {weekDates.map(date=>{
                       const remarks=getRemarks(date);
-                      return (
-                        <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:3,background:"#fff",verticalAlign:"middle",textAlign:"center"}}>
-                          {remarks.length>0&&<span style={{display:"inline-block",border:"1.5px solid #1e293b",borderRadius:5,padding:"2px 4px",fontSize:10,fontWeight:"500",color:"#1e293b",width:"100%"}}>{remarks.join(" | ")}</span>}
-                        </td>
-                      );
+                      return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:3,background:"#fff",textAlign:"center"}}>
+                        {remarks.length>0&&<span style={{display:"inline-block",border:"1.5px solid #1e293b",borderRadius:4,padding:"1px 4px",fontSize:9,fontWeight:"500",color:"#1e293b",width:"100%"}}>{remarks.join(" | ")}</span>}
+                      </td>;
                     })}
                   </tr>
-
-                  {/* שורת בוקר */}
+                  {/* בוקר */}
                   <tr>
-                    <td style={{background:"#f8fafc",padding:"6px 8px",borderRight:"3px solid #22c55e",border:"0.5px solid #e2e8f0",verticalAlign:"middle",textAlign:"center"}}>
-                      <span style={{fontSize:16}}>☀️</span>
-                      <span style={{display:"block",fontSize:13,fontWeight:"500",color:"#1e293b"}}>בוקר</span>
+                    <td style={{background:"#f8fafc",padding:"8px 4px",borderRight:"3px solid #22c55e",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",right:0,zIndex:1}}>
+                      <span style={{fontSize:14}}>☀️</span>
+                      <span style={{display:"block",fontSize:10,fontWeight:"500",color:"#1e293b"}}>בוקר</span>
                     </td>
                     {weekDates.map(date=>{
-                      const dayShifts=DAY_SHIFTS[date.getDay()]||[];
-                      const morningShift=dayShifts.find(s=>["morning","open"].includes(s.id));
-                      const closeShift=dayShifts.find(s=>s.id==="close");
-                      const phMorning=morningShift?getAssigned(date,morningShift.id,"רוקח"):[];
-                      const phClose=closeShift?getAssigned(date,closeShift.id,"רוקח"):[];
-                      const frMorning=morningShift?getAssigned(date,morningShift.id,"פרח"):[];
-                      const phAll=[...phMorning.map(id=>({id,shift:morningShift})),...phClose.map(id=>({id,shift:closeShift}))];
-                      const missingPh=morningShift&&phMorning.length<(morningShift.slots["רוקח"]||0);
-                      const missingFr=morningShift&&frMorning.length<(morningShift.slots["פרח"]||0);
-                      const note=morningShift?getShiftNote(date,morningShift.id):"";
-                      return (
-                        <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:4,verticalAlign:"top",background:missingPh||missingFr?"#fef2f2":"#fff"}}>
-                          {!morningShift&&!closeShift ? <span style={{color:"#e2e8f0",fontSize:10}}>—</span> : (
-                            <div style={{textAlign:"right"}}>
-                              {missingPh&&<div style={{fontSize:9,color:"#dc2626",fontWeight:"700",marginBottom:2}}>⚠️ חסר</div>}
-                              {phAll.map(({id,shift})=>{
-                                const emp=employees.find(e=>e.id===id);
-                                const isHovered=hoveredEmp===id;
-                                return <div key={id}
-                                  style={{padding:"2px 3px",borderRadius:4,background:isHovered?"#bfdbfe":"transparent",transition:"background 0.15s",cursor:"default"}}
-                                  onMouseEnter={()=>setHoveredEmp(id)}
-                                  onMouseLeave={()=>setHoveredEmp(null)}>
-                                  <span style={{fontSize:12,fontWeight:isHovered?"700":"500",color:"#0369a1",display:"block"}}>{emp?.name}</span>
-                                  {getEmpShiftNote(id,date,morningShift?.id||shift?.id)&&<span style={{fontSize:9,color:"#475569",display:"block",fontStyle:"italic"}}>{getEmpShiftNote(id,date,morningShift?.id||shift?.id)}</span>}
-                                </div>;
-                              })}
-                              {frMorning.length>0&&phAll.length>0&&<div style={{height:1,background:"#e2e8f0",margin:"3px 0"}}></div>}
-                              {missingFr&&<div style={{fontSize:9,color:"#dc2626",fontWeight:"700",marginBottom:2}}>⚠️ חסר</div>}
-                              {frMorning.map(id=>{
-                                const emp=employees.find(e=>e.id===id);
-                                const isHovered=hoveredEmp===id;
-                                return <div key={id}
-                                  style={{padding:"2px 3px",borderRadius:4,background:isHovered?"#ede9fe":"transparent",transition:"background 0.15s",cursor:"default"}}
-                                  onMouseEnter={()=>setHoveredEmp(id)}
-                                  onMouseLeave={()=>setHoveredEmp(null)}>
-                                  <span style={{fontSize:12,fontWeight:isHovered?"700":"500",color:"#7e22ce",display:"block"}}>{emp?.name}</span>
-                                </div>;
-                              })}
-                              {note&&<div style={{fontSize:9,color:"#1e293b",marginTop:3,borderTop:"0.5px solid #e2e8f0",paddingTop:2}}>{note}</div>}
-                              {/* זמינים לא משובצים */}
-                              {morningShift&&employees.filter(e=>e.role==="רוקח"&&isAv(e.id,date,morningShift.id)&&!phMorning.includes(e.id)).map(e=>(
-                                <div key={e.id} style={{padding:"1px 0",opacity:0.5}}>
-                                  <span style={{fontSize:11,fontWeight:"500",color:"#0ea5e9",display:"block"}}>+ {e.name}</span>
-                                </div>
-                              ))}
-                              {morningShift&&employees.filter(e=>e.role==="פרח"&&isAv(e.id,date,morningShift.id)&&!frMorning.includes(e.id)).map(e=>(
-                                <div key={e.id} style={{padding:"1px 0",opacity:0.5}}>
-                                  <span style={{fontSize:11,fontWeight:"500",color:"#a855f7",display:"block"}}>+ {e.name}</span>
-                                </div>
-                              ))}
+                      const ds=DAY_SHIFTS[date.getDay()]||[];
+                      const ms=ds.find(s=>["morning","open"].includes(s.id));
+                      const cs=ds.find(s=>s.id==="close");
+                      if(!ms&&!cs) return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",background:"#f8fafc",textAlign:"center",color:"#d1d5db",fontSize:10}}>—</td>;
+                      const allEmps=[
+                        ...(ms?getAssigned(date,ms.id,"רוקח").map(id=>({id,sh:ms})):[]),
+                        ...(cs?getAssigned(date,cs.id,"רוקח").map(id=>({id,sh:cs,label:"סגירה"})):[]),
+                        ...(ms?getAssigned(date,ms.id,"פרח").map(id=>({id,sh:ms})):[]),
+                      ];
+                      const note=ms?getShiftNote(date,ms.id):"";
+                      return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:4,verticalAlign:"top",background:"#fff",minWidth:90}}>
+                        {allEmps.map(({id,sh,label},i)=>{
+                          const emp=employees.find(e=>e.id===id);
+                          const isHov=hoveredEmp===id;
+                          const n=getEmpShiftNote(id,date,sh.id);
+                          return <div key={id}>
+                            {i>0&&allEmps[i-1].sh.id!==sh.id&&<div style={{height:1,background:"#e2e8f0",margin:"2px 0"}}></div>}
+                            <div className={`sim-emp${isHov?" hov":hoveredEmp?" dim":""}`}
+                              onClick={()=>setHoveredEmp(hoveredEmp===id?null:id)}>
+                              <span className="sim-name" style={{fontSize:12,fontWeight:"500",color:"#475569",display:"block"}}>{emp?.name}</span>
+                              <span style={{fontSize:8,color:"#94a3b8",display:"block"}}>{sh.time}{label?` ${label}`:""}</span>
+                              {n&&<span style={{fontSize:8,color:"#475569",fontStyle:"italic",display:"block",borderTop:"0.5px solid #e2e8f0",marginTop:1,paddingTop:1}}>{n}</span>}
                             </div>
-                          )}
-                        </td>
-                      );
+                          </div>;
+                        })}
+                        {!allEmps.length&&<span style={{color:"#e2e8f0",fontSize:10,display:"block",textAlign:"center"}}>—</span>}
+                        {note&&<div style={{fontSize:8,color:"#92400e",background:"#fef3c7",borderRadius:3,padding:"1px 3px",marginTop:2}}>{note}</div>}
+                      </td>;
                     })}
                   </tr>
-
-                  {/* פס מפריד */}
+                  {/* פס */}
                   <tr><td colSpan={weekDates.length+1} style={{background:"#1e293b",height:4,padding:0,border:"none"}}></td></tr>
-
-                  {/* שורת ערב */}
+                  {/* ערב */}
                   <tr>
-                    <td style={{background:"#f8fafc",padding:"6px 8px",borderRight:"3px solid #6366f1",border:"0.5px solid #e2e8f0",verticalAlign:"middle",textAlign:"center"}}>
-                      <span style={{fontSize:16}}>🌙</span>
-                      <span style={{display:"block",fontSize:13,fontWeight:"500",color:"#1e293b"}}>ערב</span>
+                    <td style={{background:"#f8fafc",padding:"8px 4px",borderRight:"3px solid #6366f1",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",right:0,zIndex:1}}>
+                      <span style={{fontSize:14}}>🌙</span>
+                      <span style={{display:"block",fontSize:10,fontWeight:"500",color:"#1e293b"}}>ערב</span>
                     </td>
                     {weekDates.map(date=>{
-                      const dayShifts=DAY_SHIFTS[date.getDay()]||[];
-                      const eveningShift=dayShifts.find(s=>["evening"].includes(s.id));
-                      if(!eveningShift) return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",background:"#f8fafc",textAlign:"center",color:"#e2e8f0",fontSize:10}}>—</td>;
-                      const phEvening=getAssigned(date,eveningShift.id,"רוקח");
-                      const frEvening=getAssigned(date,eveningShift.id,"פרח");
-                      const missingPh=phEvening.length<(eveningShift.slots["רוקח"]||0);
-                      const missingFr=frEvening.length<(eveningShift.slots["פרח"]||0);
-                      const note=getShiftNote(date,eveningShift.id);
-                      return (
-                        <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:4,verticalAlign:"top",background:missingPh||missingFr?"#fef2f2":"#fff"}}>
-                          <div style={{textAlign:"right"}}>
-                            {missingPh&&<div style={{fontSize:9,color:"#dc2626",fontWeight:"700",marginBottom:2}}>⚠️ חסר</div>}
-                            {phEvening.map(id=>{
-                              const emp=employees.find(e=>e.id===id);
-                              const isHovered=hoveredEmp===id;
-                              return <div key={id}
-                                style={{padding:"2px 3px",borderRadius:4,background:isHovered?"#bfdbfe":"transparent",transition:"background 0.15s",cursor:"default"}}
-                                onMouseEnter={()=>setHoveredEmp(id)}
-                                onMouseLeave={()=>setHoveredEmp(null)}>
-                                <span style={{fontSize:12,fontWeight:isHovered?"700":"500",color:"#0369a1",display:"block"}}>{emp?.name}</span>
-                              </div>;
-                            })}
-                            {frEvening.length>0&&phEvening.length>0&&<div style={{height:1,background:"#e2e8f0",margin:"3px 0"}}></div>}
-                            {missingFr&&(eveningShift.slots["פרח"]||0)>0&&<div style={{fontSize:9,color:"#dc2626",fontWeight:"700",marginBottom:2}}>⚠️ חסר</div>}
-                            {frEvening.map(id=>{
-                              const emp=employees.find(e=>e.id===id);
-                              const isHovered=hoveredEmp===id;
-                              return <div key={id}
-                                style={{padding:"2px 3px",borderRadius:4,background:isHovered?"#ede9fe":"transparent",transition:"background 0.15s",cursor:"default"}}
-                                onMouseEnter={()=>setHoveredEmp(id)}
-                                onMouseLeave={()=>setHoveredEmp(null)}>
-                                <span style={{fontSize:12,fontWeight:isHovered?"700":"500",color:"#7e22ce",display:"block"}}>{emp?.name}</span>
-                              </div>;
-                            })}
-                            {note&&<div style={{fontSize:9,color:"#1e293b",marginTop:3,borderTop:"0.5px solid #e2e8f0",paddingTop:2}}>{note}</div>}
-                            {/* זמינים לא משובצים */}
-                            {employees.filter(e=>e.role==="רוקח"&&isAv(e.id,date,eveningShift.id)&&!phEvening.includes(e.id)).map(e=>(
-                              <div key={e.id} style={{padding:"1px 0",opacity:0.5}}>
-                                <span style={{fontSize:11,fontWeight:"500",color:"#0ea5e9",display:"block"}}>+ {e.name}</span>
-                              </div>
-                            ))}
-                            {(eveningShift.slots["פרח"]||0)>0&&employees.filter(e=>e.role==="פרח"&&isAv(e.id,date,eveningShift.id)&&!frEvening.includes(e.id)).map(e=>(
-                              <div key={e.id} style={{padding:"1px 0",opacity:0.5}}>
-                                <span style={{fontSize:11,fontWeight:"500",color:"#a855f7",display:"block"}}>+ {e.name}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </td>
-                      );
+                      const ds=DAY_SHIFTS[date.getDay()]||[];
+                      const es=ds.find(s=>s.id==="evening");
+                      if(!es) return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",background:"#f8fafc",textAlign:"center",color:"#d1d5db",fontSize:10}}>—</td>;
+                      const allEmps=[
+                        ...getAssigned(date,es.id,"רוקח").map(id=>({id,sh:es})),
+                        ...getAssigned(date,es.id,"פרח").map(id=>({id,sh:es})),
+                      ];
+                      const note=getShiftNote(date,es.id);
+                      return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:4,verticalAlign:"top",background:"#fff",minWidth:90}}>
+                        {allEmps.map(({id,sh},i)=>{
+                          const emp=employees.find(e=>e.id===id);
+                          const isHov=hoveredEmp===id;
+                          const n=getEmpShiftNote(id,date,sh.id);
+                          return <div key={id}>
+                            {i>0&&<div style={{height:1,background:"#e2e8f0",margin:"2px 0"}}></div>}
+                            <div className={`sim-emp${isHov?" hov":hoveredEmp?" dim":""}`}
+                              onClick={()=>setHoveredEmp(hoveredEmp===id?null:id)}>
+                              <span className="sim-name" style={{fontSize:12,fontWeight:"500",color:"#475569",display:"block"}}>{emp?.name}</span>
+                              <span style={{fontSize:8,color:"#94a3b8",display:"block"}}>{sh.time}</span>
+                              {n&&<span style={{fontSize:8,color:"#475569",fontStyle:"italic",display:"block",borderTop:"0.5px solid #e2e8f0",marginTop:1,paddingTop:1}}>{n}</span>}
+                            </div>
+                          </div>;
+                        })}
+                        {!allEmps.length&&<span style={{color:"#e2e8f0",fontSize:10,display:"block",textAlign:"center"}}>—</span>}
+                        {note&&<div style={{fontSize:8,color:"#92400e",background:"#fef3c7",borderRadius:3,padding:"1px 3px",marginTop:2}}>{note}</div>}
+                      </td>;
                     })}
                   </tr>
                 </tbody>
               </table>
             </div>
-
-            {/* Stats summary */}
-            <div style={{...S.card,marginTop:14}}>
-              <div style={S.sTitle}>📈 סיכום משמרות לפי עובד</div>
-              <div style={{overflowX:"auto"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                  <thead>
-                    <tr style={{borderBottom:"2px solid #e2e8f0"}}>
-                      <th style={{textAlign:"right",padding:"6px 8px",fontWeight:"700"}}>עובד/ת</th>
-                      <th style={{textAlign:"center",padding:"6px",fontWeight:"700"}}>תפקיד</th>
-                      <th style={{textAlign:"center",padding:"6px",fontWeight:"700",color:"#0369a1"}}>בוקר</th>
-                      <th style={{textAlign:"center",padding:"6px",fontWeight:"700",color:"#7e22ce"}}>ערב</th>
-                      <th style={{textAlign:"center",padding:"6px",fontWeight:"700"}}>סה״כ</th>
-                      <th style={{textAlign:"center",padding:"6px",fontWeight:"700",color:"#64748b"}}>תקציב</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {employees.map(emp=>{
-                      const stats=getEmpStats(emp.id);
-                      const bud=BUDGET.find(b=>b.name===emp.name);
-                      const ok=!bud||(stats.total>=bud.min&&stats.total<=bud.max);
-                      return (
-                        <tr key={emp.id} style={{borderBottom:"1px solid #f1f5f9",background:!ok&&bud?"#fef2f2":"inherit"}}>
-                          <td style={{padding:"6px 8px",fontWeight:"700"}}>{emp.name}</td>
-                          <td style={{padding:"6px",textAlign:"center"}}><span style={S.badge(emp.role)}>{emp.role}</span></td>
-                          <td style={{padding:"6px",textAlign:"center",color:"#0369a1",fontWeight:"700"}}>{stats.morning}</td>
-                          <td style={{padding:"6px",textAlign:"center",color:"#7e22ce",fontWeight:"700"}}>{stats.evening}</td>
-                          <td style={{padding:"6px",textAlign:"center",fontWeight:"800"}}>{stats.total}</td>
-                          <td style={{padding:"6px",textAlign:"center",color:ok?"#22c55e":"#ef4444",fontSize:11}}>
-                            {bud ? `${bud.min}${bud.max!==bud.min?`-${bud.max===99?"∞":bud.max}`:""}${ok?" ✓":" ⚠️"}` : "—"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
           </div>
         )}
+
 
         {/* ── ASSIGN TAB ── */}
         {managerTab==="assign" && (
@@ -2439,3 +2371,5 @@ export default function App() {
     );
   }
 }
+
+
