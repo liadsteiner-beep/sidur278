@@ -338,7 +338,17 @@ export default function App() {
   const [manualVacStart, setManualVacStart] = useState("");
   const [manualVacEnd, setManualVacEnd] = useState("");
   const [manualVacNote, setManualVacNote] = useState("");
+  // For employee view: current week = this actual week (Sunday to Saturday)
+  function getCurrentWeekDates() {
+    const today = new Date();
+    const day = today.getDay(); // 0=Sun
+    const sunday = new Date(today);
+    sunday.setDate(today.getDate() - day); // go back to this week's Sunday
+    sunday.setHours(0,0,0,0);
+    return Array.from({length:7},(_,i)=>{ const d=new Date(sunday); d.setDate(sunday.getDate()+i); return d; });
+  }
   const weekDates = getWeekDates(weekOffset, false); // תמיד מציג את שבוע הסידור הנוכחי
+  const currentRealWeekDates = getCurrentWeekDates(); // השבוע האמיתי הנוכחי לעובד
   const nextWeekDates = getWeekDates(weekOffset+1, false);
   // next week published = published flag exists for next week (use same published state + offset check)
   const nextWeekPublished = published && weekOffset===0; // simplified: if current published, next may be
@@ -986,7 +996,7 @@ export default function App() {
 
           {/* Mobile schedule — single scrollable table */}
           {empTab==="schedule" && published && (()=>{
-            const displayDates = showNextWeek ? nextWeekDates : weekDates;
+            const displayDates = showNextWeek ? weekDates : currentRealWeekDates;
             return (
             <div style={{marginTop:4}}>
               {/* Next week banner */}
@@ -994,14 +1004,22 @@ export default function App() {
                 <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:8,padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10,cursor:"pointer"}} onClick={()=>setShowNextWeek(true)}>
                   <div>
                     <div style={{fontSize:13,fontWeight:"600",color:"#15803d"}}>🎉 הסידור לשבוע הבא מוכן!</div>
-                    <div style={{fontSize:11,color:"#16a34a",marginTop:2}}>{formatDateShort(nextWeekDates[0])} – {formatDateShort(nextWeekDates[6])}</div>
+                    <div style={{fontSize:11,color:"#16a34a",marginTop:2}}>{formatDateShort(weekDates[0])} – {formatDateShort(weekDates[6])}</div>
                   </div>
                   <button style={{fontSize:12,color:"#15803d",background:"#bbf7d0",border:"1.5px solid #86efac",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontWeight:"600",flexShrink:0}}>הצג ›</button>
                 </div>
               )}
+              {!showNextWeek && !published && (
+                <div style={{background:"#fef2f2",border:"1px solid #fca5a5",borderRadius:8,padding:"10px 14px",marginBottom:10}}>
+                  <div style={{fontSize:13,fontWeight:"600",color:"#dc2626",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                    <span>🙄 הסידור לשבוע הבא עוד לא מוכן —</span>
+                    <span style={{fontWeight:"500",color:"#ef4444"}}>אני על זה!</span>
+                  </div>
+                </div>
+              )}
               {showNextWeek && (
                 <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:8,padding:"8px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                  <span style={{fontSize:12,fontWeight:"600",color:"#15803d"}}>שבוע {formatDateShort(nextWeekDates[0])} – {formatDateShort(nextWeekDates[6])}</span>
+                  <span style={{fontSize:12,fontWeight:"600",color:"#15803d"}}>שבוע {formatDateShort(weekDates[0])} – {formatDateShort(weekDates[6])}</span>
                   <button style={{fontSize:11,border:"none",background:"none",color:"#64748b",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setShowNextWeek(false)}>‹ חזור לשבוע הנוכחי</button>
                 </div>
               )}
@@ -1035,9 +1053,9 @@ export default function App() {
                         const midnight=new Date(date); midnight.setHours(23,59,59,0);
                         const isPast=midnight<new Date();
                         return (
-                          <th key={dateKey(date)} style={{padding:"8px 6px",border:"0.5px solid #0F6E56",textAlign:"center",minWidth:90,opacity:isPast?0.5:1}}>
-                            <div style={{fontSize:12,fontWeight:"600"}}>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
-                            <div style={{fontSize:11,color:"#94a3b8",fontWeight:"400",marginTop:1}}>{formatDateShort(date)}</div>
+                          <th key={dateKey(date)} style={{padding:"9px 6px",border:"0.5px solid #0F6E56",textAlign:"center",minWidth:90,opacity:isPast?0.5:1}}>
+                            <div style={{fontSize:13,fontWeight:"700"}}>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
+                            <div style={{fontSize:13,fontWeight:"700",color:"#E1F5EE",marginTop:2}}>{formatDateShort(date)}</div>
                           </th>
                         );
                       })}
@@ -1134,6 +1152,51 @@ export default function App() {
                 </table>
               </div>
               <div style={{fontSize:10,color:"#94a3b8",textAlign:"center",marginTop:6}}>לחצי על משמרת לפרטים • סובב לתצוגה מלאה</div>
+
+              {/* Download & Share buttons */}
+              <div style={{display:"flex",gap:8,marginTop:10}}>
+                <button style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,padding:11,borderRadius:10,border:"none",fontSize:13,fontWeight:"500",cursor:"pointer",background:"#E1F5EE",color:"#085041"}}
+                  onClick={async()=>{
+                    const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
+                    const container = document.createElement("div");
+                    container.style.cssText="position:absolute;top:0;left:-9999px;width:1600px;background:#fff;font-family:Segoe UI,Tahoma,sans-serif;direction:rtl;";
+                    container.innerHTML = buildImageHTML();
+                    document.body.appendChild(container);
+                    await new Promise(r=>setTimeout(r,200));
+                    const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1600,windowWidth:1600});
+                    document.body.removeChild(container);
+                    const link = document.createElement("a");
+                    link.download = `סידור ${formatDateShort(displayDates[0])}-${formatDateShort(displayDates[6])}.png`;
+                    link.href = canvas.toDataURL("image/png");
+                    link.click();
+                    showToast("הסידור נשמר ✓");
+                  }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  הורד סידור
+                </button>
+                <button style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,padding:11,borderRadius:10,border:"none",fontSize:13,fontWeight:"500",cursor:"pointer",background:"#25D366",color:"#fff"}}
+                  onClick={async()=>{
+                    const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
+                    const container = document.createElement("div");
+                    container.style.cssText="position:absolute;top:0;left:-9999px;width:1600px;background:#fff;font-family:Segoe UI,Tahoma,sans-serif;direction:rtl;";
+                    container.innerHTML = buildImageHTML();
+                    document.body.appendChild(container);
+                    await new Promise(r=>setTimeout(r,200));
+                    const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1600,windowWidth:1600});
+                    document.body.removeChild(container);
+                    canvas.toBlob(async blob=>{
+                      const file=new File([blob],"סידור.png",{type:"image/png"});
+                      if(navigator.share&&navigator.canShare({files:[file]})){
+                        await navigator.share({files:[file],title:"סידור עבודה"});
+                      } else {
+                        window.open(`https://wa.me/?text=${encodeURIComponent("סידור עבודה "+formatDateShort(displayDates[0])+" - "+formatDateShort(displayDates[6]))}`,"_blank");
+                      }
+                    });
+                  }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.139.564 4.147 1.547 5.889L.057 23.456a.5.5 0 0 0 .614.614l5.694-1.49A11.94 11.94 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.006-1.374l-.36-.213-3.723.975.993-3.63-.234-.374A9.818 9.818 0 1 1 12 21.818z"/></svg>
+                  שתף
+                </button>
+              </div>
 
               {/* ── רשימת המשמרות שלי ── */}
               {(()=>{
@@ -1244,8 +1307,8 @@ export default function App() {
                       if(!shifts.length) return null;
                       return (
                         <th key={dateKey(date)} style={{background:"#f8fafc",padding:"8px 4px",border:"0.5px solid #e2e8f0",textAlign:"center",color:"#1e293b"}}>
-                          <div style={{fontSize:12,fontWeight:"600"}}>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
-                          <div style={{fontSize:10,color:"#64748b",fontWeight:"400",marginTop:1}}>{formatDateShort(date)}</div>
+                          <div style={{fontSize:13,fontWeight:"700"}}>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
+                          <div style={{fontSize:12,color:"#475569",fontWeight:"600",marginTop:1}}>{formatDateShort(date)}</div>
                         </th>
                       );
                     })}
@@ -1665,8 +1728,8 @@ export default function App() {
                     <th style={{padding:"9px 6px",border:"0.5px solid #0F6E56",width:52,textAlign:"center",fontSize:10,fontWeight:"500",position:"sticky",right:0,background:"#1D9E75",zIndex:2}}></th>
                     {weekDates.map(date=>(
                       <th key={dateKey(date)} style={{padding:"9px 6px",border:"0.5px solid #0F6E56",textAlign:"center",minWidth:90,whiteSpace:"nowrap"}}>
-                        <div style={{fontSize:12,fontWeight:"600"}}>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
-                        <div style={{fontSize:11,color:"#94a3b8",fontWeight:"400",marginTop:1}}>{formatDateShort(date)}</div>
+                        <div style={{fontSize:13,fontWeight:"700"}}>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
+                        <div style={{fontSize:13,fontWeight:"700",color:"#E1F5EE",marginTop:2}}>{formatDateShort(date)}</div>
                       </th>
                     ))}
                   </tr>
@@ -1758,6 +1821,51 @@ export default function App() {
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            {/* Download & Share */}
+            <div style={{display:"flex",gap:8,marginTop:10}}>
+              <button style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,padding:11,borderRadius:10,border:"none",fontSize:13,fontWeight:"500",cursor:"pointer",background:"#E1F5EE",color:"#085041"}}
+                onClick={async()=>{
+                  const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
+                  const container = document.createElement("div");
+                  container.style.cssText="position:absolute;top:0;left:-9999px;width:1600px;background:#fff;font-family:Segoe UI,Tahoma,sans-serif;direction:rtl;";
+                  container.innerHTML = buildImageHTML();
+                  document.body.appendChild(container);
+                  await new Promise(r=>setTimeout(r,200));
+                  const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1600,windowWidth:1600});
+                  document.body.removeChild(container);
+                  const link = document.createElement("a");
+                  link.download = `סידור ${formatDateShort(weekDates[0])}-${formatDateShort(weekDates[6])}.png`;
+                  link.href = canvas.toDataURL("image/png");
+                  link.click();
+                  showToast("הסידור נשמר ✓");
+                }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                הורד סידור
+              </button>
+              <button style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,padding:11,borderRadius:10,border:"none",fontSize:13,fontWeight:"500",cursor:"pointer",background:"#25D366",color:"#fff"}}
+                onClick={async()=>{
+                  const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
+                  const container = document.createElement("div");
+                  container.style.cssText="position:absolute;top:0;left:-9999px;width:1600px;background:#fff;font-family:Segoe UI,Tahoma,sans-serif;direction:rtl;";
+                  container.innerHTML = buildImageHTML();
+                  document.body.appendChild(container);
+                  await new Promise(r=>setTimeout(r,200));
+                  const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1600,windowWidth:1600});
+                  document.body.removeChild(container);
+                  canvas.toBlob(async blob=>{
+                    const file=new File([blob],"סידור.png",{type:"image/png"});
+                    if(navigator.share&&navigator.canShare({files:[file]})){
+                      await navigator.share({files:[file],title:"סידור עבודה"});
+                    } else {
+                      window.open(`https://wa.me/?text=${encodeURIComponent("סידור עבודה "+formatDateShort(weekDates[0])+" - "+formatDateShort(weekDates[6]))}`,"_blank");
+                    }
+                  });
+                }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.139.564 4.147 1.547 5.889L.057 23.456a.5.5 0 0 0 .614.614l5.694-1.49A11.94 11.94 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.006-1.374l-.36-.213-3.723.975.993-3.63-.234-.374A9.818 9.818 0 1 1 12 21.818z"/></svg>
+                שתף
+              </button>
             </div>
           </div>
         )}
