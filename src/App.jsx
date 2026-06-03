@@ -324,7 +324,8 @@ export default function App() {
   const [newRotaDate, setNewRotaDate] = useState("");
   const [newRotaOpen, setNewRotaOpen] = useState("");
   const [newRotaClose, setNewRotaClose] = useState("");
-  const [empTab, setEmpTab] = useState(published ? "schedule" : "avail");
+  const [empTab, setEmpTab] = useState("schedule");
+  const [showNextWeek, setShowNextWeek] = useState(false);
   const [schedView, setSchedView] = useState("list"); // unused — kept for compatibility
   const [shiftModal, setShiftModal] = useState(null); // {title, date, shiftNote, emps[]}
   // Vacation request form state (employee)
@@ -338,6 +339,9 @@ export default function App() {
   const [manualVacEnd, setManualVacEnd] = useState("");
   const [manualVacNote, setManualVacNote] = useState("");
   const weekDates = getWeekDates(weekOffset, false); // תמיד מציג את שבוע הסידור הנוכחי
+  const nextWeekDates = getWeekDates(weekOffset+1, false);
+  // next week published = published flag exists for next week (use same published state + offset check)
+  const nextWeekPublished = published && weekOffset===0; // simplified: if current published, next may be
   const [dayRemarks, setDayRemarks] = useState({}); // dateKey -> ["הורדת מבצע", ...]
   const [shiftNotes, setShiftNotes] = useState({}); // dateKey_shiftId -> string
   const [empShiftNotes, setEmpShiftNotes] = useState({}); // empId_dateKey_shiftId -> string
@@ -979,8 +983,26 @@ export default function App() {
 
 
           {/* Mobile schedule — single scrollable table */}
-          {empTab==="schedule" && published && (
+          {empTab==="schedule" && published && (()=>{
+            const displayDates = showNextWeek ? nextWeekDates : weekDates;
+            return (
             <div style={{marginTop:4}}>
+              {/* Next week banner */}
+              {!showNextWeek && (
+                <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:8,padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10,cursor:"pointer"}} onClick={()=>setShowNextWeek(true)}>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:"600",color:"#15803d"}}>🎉 הסידור לשבוע הבא מוכן!</div>
+                    <div style={{fontSize:11,color:"#16a34a",marginTop:2}}>{formatDateShort(nextWeekDates[0])} – {formatDateShort(nextWeekDates[6])}</div>
+                  </div>
+                  <button style={{fontSize:12,color:"#15803d",background:"#bbf7d0",border:"1.5px solid #86efac",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontWeight:"600",flexShrink:0}}>הצג ›</button>
+                </div>
+              )}
+              {showNextWeek && (
+                <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:8,padding:"8px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                  <span style={{fontSize:12,fontWeight:"600",color:"#15803d"}}>שבוע {formatDateShort(nextWeekDates[0])} – {formatDateShort(nextWeekDates[6])}</span>
+                  <button style={{fontSize:11,border:"none",background:"none",color:"#64748b",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setShowNextWeek(false)}>‹ חזור לשבוע הנוכחי</button>
+                </div>
+              )}
               <style>{`
                 @keyframes rotSpin { 0%,100%{transform:rotate(0deg)} 40%{transform:rotate(90deg)} 60%{transform:rotate(90deg)} }
                 .sched-rotate-tip { display:none; }
@@ -1007,7 +1029,7 @@ export default function App() {
                   <thead>
                     <tr style={{background:"#1D9E75",color:"#fff"}}>
                       <th style={{padding:"8px 8px",border:"0.5px solid #0F6E56",width:52,textAlign:"center",fontSize:10,fontWeight:"500",position:"sticky",right:0,background:"#1D9E75",zIndex:2}}></th>
-                      {weekDates.map(date=>{
+                      {displayDates.map(date=>{
                         const midnight=new Date(date); midnight.setHours(23,59,59,0);
                         const isPast=midnight<new Date();
                         return (
@@ -1023,7 +1045,7 @@ export default function App() {
                     {/* הערות יום */}
                     <tr>
                       <td style={{background:"#f8fafc",padding:"3px 6px",borderRight:"3px solid #1e293b",border:"0.5px solid #e2e8f0",fontSize:9,color:"#475569",textAlign:"center",position:"sticky",right:0,zIndex:1}}>📌</td>
-                      {weekDates.map(date=>{
+                      {displayDates.map(date=>{
                         const remarks=getRemarks(date);
                         return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:3,background:"#fff",textAlign:"center"}}>
                           {remarks.length>0&&<span style={{display:"inline-block",border:"1.5px solid #1e293b",borderRadius:4,padding:"1px 4px",fontSize:9,fontWeight:"500",color:"#1e293b",width:"100%"}}>{remarks.join(" | ")}</span>}
@@ -1036,7 +1058,7 @@ export default function App() {
                         <span style={{fontSize:16}}>☀️</span>
                         <span style={{display:"block",fontSize:9,fontWeight:"600",color:"#15803d",marginTop:2}}>בוקר</span>
                       </td>
-                      {weekDates.map(date=>{
+                      {displayDates.map(date=>{
                         const ds=DAY_SHIFTS[date.getDay()]||[];
                         const ms=ds.find(s=>["morning","open"].includes(s.id));
                         const cs=ds.find(s=>s.id==="close");
@@ -1069,14 +1091,14 @@ export default function App() {
                       })}
                     </tr>
                     {/* פס */}
-                    <tr><td colSpan={weekDates.length+1} style={{background:"#1e293b",height:4,padding:0,border:"none"}}></td></tr>
+                    <tr><td colSpan={displayDates.length+1} style={{background:"#1e293b",height:4,padding:0,border:"none"}}></td></tr>
                     {/* ערב */}
                     <tr>
                       <td style={{background:"#f5f3ff",padding:"6px 3px",borderRight:"3px solid #6366f1",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",right:0,zIndex:1}}>
                         <span style={{fontSize:16}}>🌙</span>
                         <span style={{display:"block",fontSize:9,fontWeight:"600",color:"#4338ca",marginTop:2}}>ערב</span>
                       </td>
-                      {weekDates.map(date=>{
+                      {displayDates.map(date=>{
                         const ds=DAY_SHIFTS[date.getDay()]||[];
                         const es=ds.find(s=>s.id==="evening");
                         const midnight=new Date(date); midnight.setHours(23,59,59,0);
@@ -1204,7 +1226,7 @@ export default function App() {
                 );
               })()}
             </div>
-          )}
+          );})()}
           {(empTab==="avail" || !published) && (
           <div>
           {/* Availability selection — weekly grid */}
@@ -1459,10 +1481,12 @@ export default function App() {
           </div>)} {/* end note tab */}
 
           <div style={{textAlign:"center",color:"#94a3b8",fontSize:11,marginTop:4}}>נשמר אוטומטית</div>
-          <button style={{...S.btn("#22c55e"),width:"100%",marginTop:12,padding:14,fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}
-            onClick={()=>showToast("הזמינות נשלחה למנהלת ✓")}>
-            ✅ שלח
-          </button>
+          {empTab !== "schedule" && (
+            <button style={{...S.btn("#22c55e"),width:"100%",marginTop:12,padding:14,fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}
+              onClick={()=>showToast("הזמינות נשלחה למנהלת ✓")}>
+              ✅ שלח
+            </button>
+          )}
         </div>
         {changePwModal && <ChangePwModal />}
         {shiftModal && (
@@ -1947,7 +1971,7 @@ export default function App() {
                       const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1600,windowWidth:1600});
                       document.body.removeChild(container);
                       const link = document.createElement("a");
-                      link.download = "סידור-עבודה.png";
+                      link.download = `סידור ${formatDateShort(weekDates[0])}-${formatDateShort(weekDates[6])}.png`;
                       link.href = canvas.toDataURL("image/png");
                       link.click();
                       showToast("הסידור נשמר כתמונה ✓");
