@@ -1226,7 +1226,8 @@ export default function App() {
                 );
               })()}
             </div>
-          );})()}
+            );
+          })()}
           {(empTab==="avail" || !published) && (
           <div>
           {/* Availability selection — weekly grid */}
