@@ -306,6 +306,7 @@ export default function App() {
   const [selectedEmp, setSelectedEmp] = useState(null); // emp clicked on login screen
   const [fridayRota, setFridayRota]   = useState([]); // [{name, shift, date}]
   const [published, setPublished]     = useState(false);
+  const [publishedWeekStart, setPublishedWeekStart] = useState(null); // dateKey of published week's Sunday
   const [toast, setToast]             = useState(null);
   const [managerTab, setManagerTab]   = useState("assign");
   const [newEmpName, setNewEmpName]   = useState("");
@@ -356,17 +357,8 @@ export default function App() {
   const weekDates = getWeekDates(weekOffset, false); // תמיד מציג את שבוע הסידור הנוכחי
   const currentRealWeekDates = getCurrentWeekDates(); // השבוע האמיתי הנוכחי לעובד
   const nextWeekDates = getWeekDates(weekOffset+1, false);
-  // next week published — check if Firebase has published=true for next week offset
-  const [nextWeekPublished, setNextWeekPublished] = useState(false);
-  useEffect(() => {
-    // Check if next week schedule is published in Firestore
-    const nextKey = `published_${dateKey(nextWeekDates[0])}`;
-    getDoc(doc(db,"pharmacy","schedule")).then(snap=>{
-      if(!snap.exists()) return;
-      const d = snap.data();
-      setNextWeekPublished(d[nextKey] === true);
-    }).catch(()=>{});
-  }, [nextWeekDates[0]?.toISOString()]);
+  // next week published — true if the published week matches nextWeekDates
+  const nextWeekPublished = published && publishedWeekStart === dateKey(nextWeekDates[0]);
   const [dayRemarks, setDayRemarks] = useState({}); // dateKey -> ["הורדת מבצע", ...]
   const [shiftNotes, setShiftNotes] = useState({}); // dateKey_shiftId -> string
   const [empShiftNotes, setEmpShiftNotes] = useState({}); // empId_dateKey_shiftId -> string
@@ -400,6 +392,7 @@ export default function App() {
       if (local.managerPassword && local.managerPassword !== "harishpharm2025") setManagerPassword(local.managerPassword);
       if (local.fridayRota)   setFridayRota(local.fridayRota);
       if (local.published)    setPublished(local.published);
+      if (local.publishedWeekStart) setPublishedWeekStart(local.publishedWeekStart);
       if (local.dayRemarks)   setDayRemarks(local.dayRemarks);
       if (local.shiftNotes)   setShiftNotes(local.shiftNotes);
     }
@@ -427,6 +420,7 @@ export default function App() {
       if (d.managerPassword && d.managerPassword !== "harishpharm2025") setManagerPassword(d.managerPassword);
       if (d.fridayRota)   setFridayRota(d.fridayRota);
       if (d.published)    setPublished(d.published);
+      if (d.publishedWeekStart) setPublishedWeekStart(d.publishedWeekStart);
       if (d.dayRemarks)   setDayRemarks(d.dayRemarks);
       if (d.shiftNotes)   setShiftNotes(d.shiftNotes);
       if (d.vacations)    setVacations(d.vacations);
@@ -1054,7 +1048,7 @@ export default function App() {
                 }
               `}</style>
               <div className="sched-scroll-wrap" style={{direction:"ltr"}}>
-                <table style={{borderCollapse:"collapse",fontSize:14,width:"100%",tableLayout:"fixed",background:"#fff",direction:"rtl"}}>
+                <table style={{borderCollapse:"collapse",fontSize:13,minWidth:520,background:"#fff",direction:"rtl"}}>
                   <thead>
                     <tr style={{background:"#1D9E75",color:"#fff"}}>
                       <th style={{padding:"8px 8px",border:"0.5px solid #0F6E56",width:46,textAlign:"center",fontSize:10,fontWeight:"500",position:"sticky",left:0,background:"#1D9E75",zIndex:2}}></th>
@@ -1719,7 +1713,7 @@ export default function App() {
               {hoveredEmp && <button style={{marginRight:"auto",padding:"2px 8px",border:"0.5px solid #e2e8f0",borderRadius:6,background:"#fff",fontSize:11,color:"#64748b",cursor:"pointer"}} onClick={()=>setHoveredEmp(null)}>ניקוי</button>}
             </div>
             <div className="sim-scroll" style={{direction:"ltr"}}>
-              <table style={{borderCollapse:"collapse",fontSize:14,width:"100%",tableLayout:"fixed",background:"#fff",direction:"rtl"}}>
+              <table style={{borderCollapse:"collapse",fontSize:13,minWidth:520,background:"#fff",direction:"rtl"}}>
                 <thead>
                   <tr style={{background:"#1D9E75",color:"#fff"}}>
                     <th style={{padding:"9px 6px",border:"0.5px solid #0F6E56",width:46,textAlign:"center",fontSize:10,fontWeight:"500",position:"sticky",left:0,background:"#1D9E75",zIndex:2}}></th>
@@ -2063,11 +2057,11 @@ export default function App() {
                 {/* Publish in app */}
                 <button style={{...S.btn(published?"#22c55e":"#0ea5e9"),padding:12,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={()=>{
                   setPublished(true);
-                  // Save published flag with week date key so employees can check next week
-                  const pubKey = `published_${dateKey(weekDates[0])}`;
+                  const pubWeekStart = dateKey(weekDates[0]);
+                  setPublishedWeekStart(pubWeekStart);
                   getDoc(doc(db,"pharmacy","schedule")).then(snap=>{
                     const data = snap.exists() ? snap.data() : {};
-                    setDoc(doc(db,"pharmacy","schedule"), {...data, [pubKey]: true}, {merge:true});
+                    setDoc(doc(db,"pharmacy","schedule"), {...data, published: true, publishedWeekStart: pubWeekStart}, {merge:true});
                   }).catch(()=>{});
                   showToast("פורסם ✓");
                 }}>
