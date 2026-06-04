@@ -760,50 +760,85 @@ export default function App() {
 
   function buildImageHTML() {
     const days = weekDates.map(date=>({
-      label: date.toLocaleDateString("he-IL",{weekday:"long"}),
-      date: formatDateShort(date),
+      label: date.toLocaleDateString("he-IL",{weekday:"short"}),
+      dateFull: formatDateShort(date),
       dayObj: date,
     }));
-    const colW = Math.floor((1600-120-64)/7); // 64px for 32px padding each side
-    const empCell = (emps, note) => {
-      let h="";
-      emps.forEach((emp,j)=>{
-        if(j>0) h+=`<div style="height:3px;background:#e2e8f0;margin:8px 0;"></div>`;
-        h+=`<div style="padding:5px 7px;"><span style="font-size:28px;font-weight:700;color:#1e293b;display:block;">${emp.name}${emp.label?` <span style="font-size:18px;color:#64748b;">(${emp.label})</span>`:""}</span><span style="font-size:20px;color:#64748b;display:block;margin-top:3px;">${emp.time}</span>${emp.note?`<span style="font-size:17px;color:#475569;font-style:italic;display:block;margin-top:4px;">${emp.note}</span>`:""}</div>`;
-      });
-      if(note) h+=`<div style="font-size:18px;color:#92400e;background:#fef3c7;border-radius:6px;padding:6px 10px;margin-top:6px;">📋 ${note}</div>`;
-      return h;
+    const colW = Math.floor((1536-100)/7); // 1536px total, 100px for label col
+
+    const empBlock = (emp) => {
+      const noteHtml = emp.note ? `<div style="font-size:19px;color:#475569;font-style:italic;margin-top:3px;">${emp.note}</div>` : "";
+      const labelHtml = emp.label ? ` <span style="font-size:19px;color:#64748b;font-weight:400;">${emp.label}</span>` : "";
+      return `<div style="padding:6px 10px;border-bottom:1px solid #f1f5f9;">
+        <div style="font-size:28px;font-weight:800;color:#1e293b;">${emp.name}${labelHtml}</div>
+        <div style="font-size:20px;color:#475569;margin-top:2px;">${emp.time}</div>
+        ${noteHtml}
+      </div>`;
     };
-    let html=`<div style="background:#1D9E75;padding:22px 28px;display:flex;justify-content:space-between;align-items:center;"><span style="color:#fff;font-size:30px;font-weight:700;">💊 ${APP_NAME}</span><span style="color:#E1F5EE;font-size:20px;">✓ פורסם | ${formatDateShort(weekDates[0])}–${formatDateShort(weekDates[6])}</span></div>`;
-    html+=`<table style="border-collapse:collapse;width:100%;table-layout:fixed;"><thead><tr style="background:#1D9E75;color:#fff;"><th style="width:120px;padding:16px 8px;border:1px solid #0F6E56;"></th>${days.map(d=>`<th style="width:${colW}px;padding:16px 6px;border:1px solid #0F6E56;font-size:20px;font-weight:700;text-align:center;">${d.label}<br><span style="font-size:16px;opacity:0.8;font-weight:400;">${d.date}</span></th>`).join("")}</tr></thead><tbody>`;
-    // Morning
-    html+=`<tr><td style="background:#f0fdf4;padding:16px 6px;border-right:6px solid #22c55e;border:1px solid #e2e8f0;text-align:center;"><div style="font-size:34px;">☀️</div><div style="font-size:18px;font-weight:700;color:#15803d;margin-top:4px;">בוקר</div></td>`;
-    days.forEach(({dayObj})=>{
-      const ds=DAY_SHIFTS[dayObj.getDay()]||[];
-      const ms=ds.find(s=>["morning","open"].includes(s.id));
-      const cs=ds.find(s=>s.id==="close");
-      if(!ms&&!cs){html+=`<td style="border:1px solid #e2e8f0;background:#f8fafc;text-align:center;color:#d1d5db;font-size:22px;">—</td>`;return;}
-      const emps=[
-        ...(ms?getAssigned(dayObj,ms.id,"רוקח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:ms.time,note:getEmpShiftNote(id,dayObj,ms.id)})):[]),
-        ...(cs?getAssigned(dayObj,cs.id,"רוקח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:cs.time,label:"סגירה",note:getEmpShiftNote(id,dayObj,cs.id)})):[]),
-        ...(ms?getAssigned(dayObj,ms.id,"פרח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:ms.time,note:getEmpShiftNote(id,dayObj,ms.id)})):[]),
-      ];
-      html+=`<td style="border:1px solid #e2e8f0;padding:8px;vertical-align:top;background:#fff;">${empCell(emps,ms?getShiftNote(dayObj,ms.id):"")}</td>`;
+
+    const shiftCell = (emps, shiftNote) => {
+      if (!emps.length) return `<td style="border:1px solid #e2e8f0;background:#f8fafc;text-align:center;color:#d1d5db;font-size:28px;vertical-align:middle;">—</td>`;
+      let inner = emps.map(e => empBlock(e)).join('');
+      if (shiftNote) inner += `<div style="font-size:18px;color:#92400e;background:#fef3c7;margin:4px 8px 6px;padding:5px 8px;border-radius:6px;">📋 ${shiftNote}</div>`;
+      return `<td style="border:1px solid #e2e8f0;vertical-align:top;background:#fff;padding:0;">${inner}</td>`;
+    };
+
+    let html = `<div style="background:#f8fafc;padding:24px 24px 32px;direction:rtl;font-family:Segoe UI,Tahoma,Arial,sans-serif;">`;
+
+    // Table
+    html += `<table style="border-collapse:collapse;width:1536px;table-layout:fixed;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.1);">`;
+
+    // Header
+    html += `<thead><tr>`;
+    html += `<th style="width:100px;background:#1D9E75;border:0.5px solid #0F6E56;"></th>`;
+    days.forEach(d => {
+      html += `<th style="width:${colW}px;background:#1D9E75;color:#fff;border:0.5px solid #0F6E56;padding:16px 8px;text-align:center;">
+        <div style="font-size:26px;font-weight:800;">${d.label}</div>
+        <div style="font-size:22px;font-weight:700;color:#E1F5EE;margin-top:4px;">${d.dateFull}</div>
+      </th>`;
     });
-    html+=`</tr><tr><td colspan="8" style="background:#1e293b;height:6px;padding:0;border:none;"></td></tr>`;
-    // Evening
-    html+=`<tr><td style="background:#f5f3ff;padding:16px 6px;border-right:6px solid #6366f1;border:1px solid #e2e8f0;text-align:center;"><div style="font-size:34px;">🌙</div><div style="font-size:18px;font-weight:700;color:#4338ca;margin-top:4px;">ערב</div></td>`;
-    days.forEach(({dayObj})=>{
-      const ds=DAY_SHIFTS[dayObj.getDay()]||[];
-      const es=ds.find(s=>s.id==="evening");
-      if(!es){html+=`<td style="border:1px solid #e2e8f0;background:#f8fafc;text-align:center;color:#d1d5db;font-size:22px;">—</td>`;return;}
-      const emps=[
+    html += `</tr></thead><tbody>`;
+
+    // Morning row
+    html += `<tr>`;
+    html += `<td style="background:#f0fdf4;border-right:5px solid #22c55e;border:0.5px solid #e2e8f0;text-align:center;vertical-align:middle;padding:12px 4px;">
+      <div style="font-size:36px;">☀️</div>
+      <div style="font-size:18px;font-weight:800;color:#15803d;margin-top:6px;">בוקר</div>
+    </td>`;
+    days.forEach(({dayObj}) => {
+      const ds = DAY_SHIFTS[dayObj.getDay()]||[];
+      const ms = ds.find(s=>["morning","open"].includes(s.id));
+      const cs = ds.find(s=>s.id==="close");
+      if (!ms && !cs) { html += `<td style="border:0.5px solid #e2e8f0;background:#f8fafc;text-align:center;color:#d1d5db;font-size:28px;vertical-align:middle;">—</td>`; return; }
+      const emps = [
+        ...(ms ? getAssigned(dayObj,ms.id,"רוקח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:ms.time,note:getEmpShiftNote(id,dayObj,ms.id)})) : []),
+        ...(cs ? getAssigned(dayObj,cs.id,"רוקח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:cs.time,label:"סגירה",note:getEmpShiftNote(id,dayObj,cs.id)})) : []),
+        ...(ms ? getAssigned(dayObj,ms.id,"פרח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:ms.time,note:getEmpShiftNote(id,dayObj,ms.id)})) : []),
+      ];
+      html += shiftCell(emps, ms ? getShiftNote(dayObj,ms.id) : "");
+    });
+    html += `</tr>`;
+
+    // Divider
+    html += `<tr><td colspan="8" style="background:#1e293b;height:6px;padding:0;border:none;"></td></tr>`;
+
+    // Evening row
+    html += `<tr>`;
+    html += `<td style="background:#f5f3ff;border-right:5px solid #6366f1;border:0.5px solid #e2e8f0;text-align:center;vertical-align:middle;padding:12px 4px;">
+      <div style="font-size:36px;">🌙</div>
+      <div style="font-size:18px;font-weight:800;color:#4338ca;margin-top:6px;">ערב</div>
+    </td>`;
+    days.forEach(({dayObj}) => {
+      const ds = DAY_SHIFTS[dayObj.getDay()]||[];
+      const es = ds.find(s=>s.id==="evening");
+      if (!es) { html += `<td style="border:0.5px solid #e2e8f0;background:#f8fafc;text-align:center;color:#d1d5db;font-size:28px;vertical-align:middle;">—</td>`; return; }
+      const emps = [
         ...getAssigned(dayObj,es.id,"רוקח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:es.time,note:getEmpShiftNote(id,dayObj,es.id)})),
         ...getAssigned(dayObj,es.id,"פרח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:es.time,note:getEmpShiftNote(id,dayObj,es.id)})),
       ];
-      html+=`<td style="border:1px solid #e2e8f0;padding:8px;vertical-align:top;background:#fff;">${empCell(emps,getShiftNote(dayObj,es.id))}</td>`;
+      html += shiftCell(emps, getShiftNote(dayObj,es.id));
     });
-    html+=`</tr></tbody></table>`;
+    html += `</tr></tbody></table></div>`;
     return html;
   }
 
@@ -1174,11 +1209,11 @@ export default function App() {
                   onClick={async()=>{
                     const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
                     const container = document.createElement("div");
-                    container.style.cssText="position:absolute;top:0;left:-9999px;width:1600px;background:#f8fafc;font-family:Segoe UI,Tahoma,sans-serif;direction:rtl;padding:32px;";
+                    container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px;";
                     container.innerHTML = buildImageHTML();
                     document.body.appendChild(container);
                     await new Promise(r=>setTimeout(r,200));
-                    const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1600,windowWidth:1600});
+                    const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1584,windowWidth:1584});
                     document.body.removeChild(container);
                     const link = document.createElement("a");
                     link.download = `סידור ${formatDateShort(displayDates[0])}-${formatDateShort(displayDates[6])}.png`;
@@ -1193,11 +1228,11 @@ export default function App() {
                   onClick={async()=>{
                     const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
                     const container = document.createElement("div");
-                    container.style.cssText="position:absolute;top:0;left:-9999px;width:1600px;background:#f8fafc;font-family:Segoe UI,Tahoma,sans-serif;direction:rtl;padding:32px;";
+                    container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px;";
                     container.innerHTML = buildImageHTML();
                     document.body.appendChild(container);
                     await new Promise(r=>setTimeout(r,200));
-                    const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1600,windowWidth:1600});
+                    const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1584,windowWidth:1584});
                     document.body.removeChild(container);
                     canvas.toBlob(async blob=>{
                       const file=new File([blob],"סידור.png",{type:"image/png"});
@@ -1832,11 +1867,11 @@ export default function App() {
                 onClick={async()=>{
                   const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
                   const container = document.createElement("div");
-                  container.style.cssText="position:absolute;top:0;left:-9999px;width:1600px;background:#f8fafc;font-family:Segoe UI,Tahoma,sans-serif;direction:rtl;padding:32px;";
+                  container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px;";
                   container.innerHTML = buildImageHTML();
                   document.body.appendChild(container);
                   await new Promise(r=>setTimeout(r,200));
-                  const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1600,windowWidth:1600});
+                  const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1584,windowWidth:1584});
                   document.body.removeChild(container);
                   const link = document.createElement("a");
                   link.download = `סידור ${formatDateShort(weekDates[0])}-${formatDateShort(weekDates[6])}.png`;
@@ -1851,11 +1886,11 @@ export default function App() {
                 onClick={async()=>{
                   const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
                   const container = document.createElement("div");
-                  container.style.cssText="position:absolute;top:0;left:-9999px;width:1600px;background:#f8fafc;font-family:Segoe UI,Tahoma,sans-serif;direction:rtl;padding:32px;";
+                  container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px;";
                   container.innerHTML = buildImageHTML();
                   document.body.appendChild(container);
                   await new Promise(r=>setTimeout(r,200));
-                  const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1600,windowWidth:1600});
+                  const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1584,windowWidth:1584});
                   document.body.removeChild(container);
                   canvas.toBlob(async blob=>{
                     const file=new File([blob],"סידור.png",{type:"image/png"});
@@ -2087,11 +2122,11 @@ export default function App() {
                       const wrap = document.getElementById("mgr-sched-capture");
                       if(!wrap){showToast("גלול לסימולציה תחילה","err");return;}
                       const container = document.createElement("div");
-                      container.style.cssText="position:absolute;top:0;left:-9999px;width:1600px;background:#f8fafc;font-family:Segoe UI,Tahoma,sans-serif;direction:rtl;padding:32px;";
+                      container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px;";
                       container.innerHTML = buildImageHTML();
                       document.body.appendChild(container);
                       await new Promise(r=>setTimeout(r,200));
-                      const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1600,windowWidth:1600});
+                      const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1584,windowWidth:1584});
                       document.body.removeChild(container);
                       const link = document.createElement("a");
                       link.download = `סידור ${formatDateShort(weekDates[0])}-${formatDateShort(weekDates[6])}.png`;
@@ -2105,11 +2140,11 @@ export default function App() {
                     onClick={async()=>{
                       const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
                       const container = document.createElement("div");
-                      container.style.cssText="position:absolute;top:0;left:-9999px;width:1600px;background:#f8fafc;font-family:Segoe UI,Tahoma,sans-serif;direction:rtl;padding:32px;";
+                      container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px;";
                       container.innerHTML = buildImageHTML();
                       document.body.appendChild(container);
                       await new Promise(r=>setTimeout(r,200));
-                      const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1600,windowWidth:1600});
+                      const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1584,windowWidth:1584});
                       document.body.removeChild(container);
                       canvas.toBlob(async blob=>{
                         const file = new File([blob],"סידור.png",{type:"image/png"});
