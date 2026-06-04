@@ -338,24 +338,12 @@ export default function App() {
   const currentRealWeekDates = getWeekDates(0); // שבוע נוכחי
   const nextWeekDates = getWeekDates(1); // שבוע הבא
 
-  // nextWeekPublished: published=true AND published week is next week
-  const nextWeekPublished = (() => {
-    if (!published) return false;
-    const pubSunday = publishedWeekStart ? new Date(publishedWeekStart) : new Date(weekDates[0]);
-    pubSunday.setHours(0,0,0,0);
-    const curSat = new Date(currentRealWeekDates[6]);
-    curSat.setHours(23,59,59,0);
-    return pubSunday > curSat;
-  })();
+  // nextWeekPublished: if schedule is published, assume it's for next week
+  const nextWeekPublished = published;
 
   const empDisplayDates = showNextWeek ? nextWeekDates : weekDates;
-  // nextWeekDates = weekDates (what manager published) when it's after current week, else week after current
-  const nextWeekDates = nextWeekPublished ? weekDates : (() => {
-    const nextSunday = new Date(currentRealWeekDates[6]);
-    nextSunday.setDate(nextSunday.getDate() + 1);
-    nextSunday.setHours(0,0,0,0);
-    return Array.from({length:7},(_,i)=>{ const d=new Date(nextSunday); d.setDate(nextSunday.getDate()+i); return d; });
-  })();
+  // nextWeekDates = week offset 1 from current
+  const nextWeekDates = getWeekDates(1);
   // next week published — true if publishedWeekStart matches next week's Sunday
   // nextWeekPublished: published week (weekDates) is after current real week
   const nextWeekPublished = (() => {
