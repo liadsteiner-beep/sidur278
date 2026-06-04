@@ -740,11 +740,11 @@ export default function App() {
     const colW = Math.floor((1536-100)/7); // 1536px total, 100px for label col
 
     const empBlock = (emp) => {
-      const noteHtml = emp.note ? `<div style="font-size:19px;color:#475569;font-style:italic;margin-top:3px;">${emp.note}</div>` : "";
+      const noteHtml = emp.note ? `<div style="font-size:22px;color:#334155;font-style:italic;margin-top:4px;">${emp.note}</div>` : "";
       const labelHtml = emp.label ? ` <span style="font-size:19px;color:#64748b;font-weight:400;">${emp.label}</span>` : "";
-      return `<div style="padding:6px 10px;border-bottom:1px solid #f1f5f9;">
-        <div style="font-size:28px;font-weight:800;color:#1e293b;">${emp.name}${labelHtml}</div>
-        <div style="font-size:20px;color:#475569;margin-top:2px;">${emp.time}</div>
+      return `<div style="padding:8px 12px;border-bottom:1px solid #f1f5f9;">
+        <div style="font-size:30px;font-weight:800;color:#1e293b;">${emp.name}${labelHtml}</div>
+        <div style="font-size:22px;color:#475569;margin-top:3px;">${emp.time}</div>
         ${noteHtml}
       </div>`;
     };
@@ -756,18 +756,18 @@ export default function App() {
       return `<td style="border:1px solid #e2e8f0;vertical-align:top;background:#fff;padding:0;">${inner}</td>`;
     };
 
-    let html = `<div style="background:#f8fafc;padding:24px 24px 32px;direction:rtl;font-family:Segoe UI,Tahoma,Arial,sans-serif;">`;
+    let html = `<div style="direction:rtl;font-family:Segoe UI,Tahoma,Arial,sans-serif;background:#fff;">`;
 
     // Table
-    html += `<table style="border-collapse:collapse;width:1536px;table-layout:fixed;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.1);">`;
+    html += `<table style="border-collapse:collapse;width:100%;table-layout:fixed;background:#fff;">`;
 
     // Header
     html += `<thead><tr>`;
     html += `<th style="width:100px;background:#1D9E75;border:0.5px solid #0F6E56;"></th>`;
     days.forEach(d => {
       html += `<th style="width:${colW}px;background:#1D9E75;color:#fff;border:0.5px solid #0F6E56;padding:16px 8px;text-align:center;">
-        <div style="font-size:26px;font-weight:800;">${d.label}</div>
-        <div style="font-size:22px;font-weight:700;color:#E1F5EE;margin-top:4px;">${d.dateFull}</div>
+        <div style="font-size:28px;font-weight:800;">${d.label}</div>
+        <div style="font-size:24px;font-weight:700;color:#E1F5EE;margin-top:5px;">${d.dateFull}</div>
       </th>`;
     });
     html += `</tr></thead><tbody>`;
@@ -1182,7 +1182,7 @@ export default function App() {
                   onClick={async()=>{
                     const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
                     const container = document.createElement("div");
-                    container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px;";
+                    container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px 48px;";
                     container.innerHTML = buildImageHTML();
                     document.body.appendChild(container);
                     await new Promise(r=>setTimeout(r,200));
@@ -1201,7 +1201,7 @@ export default function App() {
                   onClick={async()=>{
                     const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
                     const container = document.createElement("div");
-                    container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px;";
+                    container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px 48px;";
                     container.innerHTML = buildImageHTML();
                     document.body.appendChild(container);
                     await new Promise(r=>setTimeout(r,200));
@@ -1840,7 +1840,7 @@ export default function App() {
                 onClick={async()=>{
                   const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
                   const container = document.createElement("div");
-                  container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px;";
+                  container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px 48px;";
                   container.innerHTML = buildImageHTML();
                   document.body.appendChild(container);
                   await new Promise(r=>setTimeout(r,200));
@@ -1859,7 +1859,7 @@ export default function App() {
                 onClick={async()=>{
                   const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
                   const container = document.createElement("div");
-                  container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px;";
+                  container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px 48px;";
                   container.innerHTML = buildImageHTML();
                   document.body.appendChild(container);
                   await new Promise(r=>setTimeout(r,200));
@@ -2095,7 +2095,7 @@ export default function App() {
                       const wrap = document.getElementById("mgr-sched-capture");
                       if(!wrap){showToast("גלול לסימולציה תחילה","err");return;}
                       const container = document.createElement("div");
-                      container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px;";
+                      container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px 48px;";
                       container.innerHTML = buildImageHTML();
                       document.body.appendChild(container);
                       await new Promise(r=>setTimeout(r,200));
@@ -2113,7 +2113,7 @@ export default function App() {
                     onClick={async()=>{
                       const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
                       const container = document.createElement("div");
-                      container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px;";
+                      container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px 48px;";
                       container.innerHTML = buildImageHTML();
                       document.body.appendChild(container);
                       await new Promise(r=>setTimeout(r,200));
