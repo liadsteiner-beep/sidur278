@@ -363,6 +363,12 @@ export default function App() {
   const [hoveredEmp, setHoveredEmp] = useState(null);
   const dragRef = useRef(null); // {empId, date, shiftId, role}
 
+  // Enable pinch-to-zoom on the whole page
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (meta) meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes';
+  }, []);
+
   useEffect(() => {
     // Load from localStorage as fast fallback while Firebase loads
     const local = loadLocalData();
@@ -1026,29 +1032,17 @@ export default function App() {
               <style>{`
                 @keyframes rotSpin { 0%,100%{transform:rotate(0deg)} 40%{transform:rotate(90deg)} 60%{transform:rotate(90deg)} }
                 .sched-rotate-tip { display:none; }
-                .sched-scroll-wrap { overflow-x:auto; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.08); touch-action:pan-x pan-y pinch-zoom; }
+                .sched-scroll-wrap { overflow-x:auto; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.08); direction:ltr; }
                 @media (orientation: landscape) {
                   .sched-scroll-wrap { overflow-x:visible; }
                   .sched-scroll-wrap table { min-width:unset !important; width:100%; }
                 }
               `}</style>
-              <div className="sched-scroll-wrap" ref={el=>{
-                if(!el||el._pz) return; el._pz=true;
-                let scale=1,lastDist=null;
-                el.addEventListener('touchstart',e=>{if(e.touches.length===2)lastDist=null;},{passive:true});
-                el.addEventListener('touchmove',e=>{
-                  if(e.touches.length!==2)return;
-                  const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;
-                  const dist=Math.sqrt(dx*dx+dy*dy);
-                  if(lastDist){scale*=dist/lastDist;scale=Math.max(0.4,Math.min(2,scale));el.style.transform=`scale(${scale})`;el.style.transformOrigin='top right';}
-                  lastDist=dist;
-                },{passive:true});
-                el.addEventListener('touchend',()=>{lastDist=null;},{passive:true});
-              }}>
-                <table style={{borderCollapse:"collapse",fontSize:14,minWidth:700,background:"#fff"}}>
+              <div className="sched-scroll-wrap" style={{direction:"ltr"}}>
+                <table style={{borderCollapse:"collapse",fontSize:14,minWidth:700,background:"#fff",direction:"rtl"}}>
                   <thead>
                     <tr style={{background:"#1D9E75",color:"#fff"}}>
-                      <th style={{padding:"8px 8px",border:"0.5px solid #0F6E56",width:52,textAlign:"center",fontSize:10,fontWeight:"500",position:"sticky",right:0,background:"#1D9E75",zIndex:2}}></th>
+                      <th style={{padding:"8px 8px",border:"0.5px solid #0F6E56",width:52,textAlign:"center",fontSize:10,fontWeight:"500",position:"sticky",left:0,background:"#1D9E75",zIndex:2}}></th>
                       {displayDates.map(date=>{
                         const midnight=new Date(date); midnight.setHours(23,59,59,0);
                         const isPast=midnight<new Date();
@@ -1064,7 +1058,7 @@ export default function App() {
                   <tbody>
                     {/* הערות יום */}
                     <tr>
-                      <td style={{background:"#f8fafc",padding:"3px 6px",borderRight:"3px solid #1e293b",border:"0.5px solid #e2e8f0",fontSize:9,color:"#475569",textAlign:"center",position:"sticky",right:0,zIndex:1}}>📌</td>
+                      <td style={{background:"#f8fafc",padding:"3px 6px",borderLeft:"3px solid #1e293b",border:"0.5px solid #e2e8f0",fontSize:9,color:"#475569",textAlign:"center",position:"sticky",left:0,zIndex:1}}>📌</td>
                       {displayDates.map(date=>{
                         const remarks=getRemarks(date);
                         return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:3,background:"#fff",textAlign:"center"}}>
@@ -1074,7 +1068,7 @@ export default function App() {
                     </tr>
                     {/* בוקר */}
                     <tr>
-                      <td style={{background:"#f0fdf4",padding:"6px 3px",borderRight:"3px solid #22c55e",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",right:0,zIndex:1}}>
+                      <td style={{background:"#f0fdf4",padding:"6px 3px",borderLeft:"3px solid #22c55e",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",left:0,zIndex:1}}>
                         <span style={{fontSize:16}}>☀️</span>
                         <span style={{display:"block",fontSize:9,fontWeight:"600",color:"#15803d",marginTop:2}}>בוקר</span>
                       </td>
@@ -1114,7 +1108,7 @@ export default function App() {
                     <tr><td colSpan={displayDates.length+1} style={{background:"#1e293b",height:4,padding:0,border:"none"}}></td></tr>
                     {/* ערב */}
                     <tr>
-                      <td style={{background:"#f5f3ff",padding:"6px 3px",borderRight:"3px solid #6366f1",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",right:0,zIndex:1}}>
+                      <td style={{background:"#f5f3ff",padding:"6px 3px",borderLeft:"3px solid #6366f1",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",left:0,zIndex:1}}>
                         <span style={{fontSize:16}}>🌙</span>
                         <span style={{display:"block",fontSize:9,fontWeight:"600",color:"#4338ca",marginTop:2}}>ערב</span>
                       </td>
@@ -1702,30 +1696,18 @@ export default function App() {
               .sim-emp.hov { background:#dbeafe !important; outline:1.5px solid #3b82f6; }
               .sim-emp.hov .sim-name { color:#1d4ed8 !important; font-weight:700 !important; }
               .sim-emp.dim { opacity:0.18; }
-              .sim-scroll { overflow-x:auto; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.08); touch-action:pan-x pan-y pinch-zoom; }
+              .sim-scroll { overflow-x:auto; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.08); touch-action:pan-x pan-y pinch-zoom; direction:ltr; }
             `}</style>
             <div style={{fontSize:11,color:"#64748b",marginBottom:6,display:"flex",alignItems:"center",gap:8,background:"#f8fafc",border:"0.5px solid #e2e8f0",borderRadius:8,padding:"6px 10px"}}>
               <span style={{fontSize:13}}>👆</span>
               <span>לחצי על שם להדגשת כל משמרותיו/ה</span>
               {hoveredEmp && <button style={{marginRight:"auto",padding:"2px 8px",border:"0.5px solid #e2e8f0",borderRadius:6,background:"#fff",fontSize:11,color:"#64748b",cursor:"pointer"}} onClick={()=>setHoveredEmp(null)}>ניקוי</button>}
             </div>
-            <div className="sim-scroll" ref={el=>{
-              if(!el||el._pz) return; el._pz=true;
-              let scale=1,last=null;
-              el.addEventListener('touchstart',e=>{if(e.touches.length===2)last=null;},{passive:true});
-              el.addEventListener('touchmove',e=>{
-                if(e.touches.length!==2)return;
-                const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;
-                const d=Math.sqrt(dx*dx+dy*dy);
-                if(last){scale*=d/last;scale=Math.max(0.4,Math.min(2.5,scale));el.style.transform=`scale(${scale})`;el.style.transformOrigin='top right';}
-                last=d;
-              },{passive:true});
-              el.addEventListener('touchend',()=>{last=null;},{passive:true});
-            }}>
-              <table style={{borderCollapse:"collapse",fontSize:14,minWidth:700,background:"#fff"}}>
+            <div className="sim-scroll" style={{direction:"ltr"}}>
+              <table style={{borderCollapse:"collapse",fontSize:14,minWidth:700,background:"#fff",direction:"rtl"}}>
                 <thead>
                   <tr style={{background:"#1D9E75",color:"#fff"}}>
-                    <th style={{padding:"9px 6px",border:"0.5px solid #0F6E56",width:52,textAlign:"center",fontSize:10,fontWeight:"500",position:"sticky",right:0,background:"#1D9E75",zIndex:2}}></th>
+                    <th style={{padding:"9px 6px",border:"0.5px solid #0F6E56",width:52,textAlign:"center",fontSize:10,fontWeight:"500",position:"sticky",left:0,background:"#1D9E75",zIndex:2}}></th>
                     {weekDates.map(date=>(
                       <th key={dateKey(date)} style={{padding:"9px 6px",border:"0.5px solid #0F6E56",textAlign:"center",minWidth:90,whiteSpace:"nowrap"}}>
                         <div style={{fontSize:15,fontWeight:"800"}}>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
@@ -1737,7 +1719,7 @@ export default function App() {
                 <tbody>
                   {/* הערות יום */}
                   <tr>
-                    <td style={{background:"#f8fafc",padding:"3px 6px",borderRight:"3px solid #1e293b",border:"0.5px solid #e2e8f0",fontSize:9,color:"#475569",textAlign:"center",position:"sticky",right:0,zIndex:1}}>📌</td>
+                    <td style={{background:"#f8fafc",padding:"3px 6px",borderLeft:"3px solid #1e293b",border:"0.5px solid #e2e8f0",fontSize:9,color:"#475569",textAlign:"center",position:"sticky",left:0,zIndex:1}}>📌</td>
                     {weekDates.map(date=>{
                       const remarks=getRemarks(date);
                       return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:3,background:"#fff",textAlign:"center"}}>
@@ -1747,7 +1729,7 @@ export default function App() {
                   </tr>
                   {/* בוקר */}
                   <tr>
-                    <td style={{background:"#f0fdf4",padding:"6px 3px",borderRight:"3px solid #22c55e",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",right:0,zIndex:1}}>
+                    <td style={{background:"#f0fdf4",padding:"6px 3px",borderLeft:"3px solid #22c55e",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",left:0,zIndex:1}}>
                       <span style={{fontSize:16}}>☀️</span>
                       <span style={{display:"block",fontSize:9,fontWeight:"600",color:"#15803d",marginTop:2}}>בוקר</span>
                     </td>
@@ -1786,7 +1768,7 @@ export default function App() {
                   <tr><td colSpan={weekDates.length+1} style={{background:"#1e293b",height:4,padding:0,border:"none"}}></td></tr>
                   {/* ערב */}
                   <tr>
-                    <td style={{background:"#f5f3ff",padding:"6px 3px",borderRight:"3px solid #6366f1",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",right:0,zIndex:1}}>
+                    <td style={{background:"#f5f3ff",padding:"6px 3px",borderLeft:"3px solid #6366f1",border:"0.5px solid #e2e8f0",textAlign:"center",verticalAlign:"middle",position:"sticky",left:0,zIndex:1}}>
                       <span style={{fontSize:16}}>🌙</span>
                       <span style={{display:"block",fontSize:9,fontWeight:"600",color:"#4338ca",marginTop:2}}>ערב</span>
                     </td>
