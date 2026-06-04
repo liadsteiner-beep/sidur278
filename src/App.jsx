@@ -356,17 +356,33 @@ export default function App() {
   }
   const weekDates = getWeekDates(weekOffset, false); // תמיד מציג את שבוע הסידור הנוכחי
   const currentRealWeekDates = getCurrentWeekDates(); // השבוע האמיתי הנוכחי לעובד
-  // nextWeekDates = the week after the current real week
+  // nextWeekDates = the published week (if exists) or the week after current
   const nextWeekDates = (() => {
-    const nextSunday = new Date(currentRealWeekDates[6]); // Saturday
-    nextSunday.setDate(nextSunday.getDate() + 1); // next Sunday
+    if (publishedWeekStart) {
+      const sunday = new Date(publishedWeekStart);
+      sunday.setHours(0,0,0,0);
+      return Array.from({length:7},(_,i)=>{ const d=new Date(sunday); d.setDate(sunday.getDate()+i); return d; });
+    }
+    // fallback: next week from current
+    const nextSunday = new Date(currentRealWeekDates[6]);
+    nextSunday.setDate(nextSunday.getDate() + 1);
     nextSunday.setHours(0,0,0,0);
     return Array.from({length:7},(_,i)=>{ const d=new Date(nextSunday); d.setDate(nextSunday.getDate()+i); return d; });
   })();
   // next week published — true if publishedWeekStart matches next week's Sunday
-  const nextWeekPublished = published && publishedWeekStart === dateKey(nextWeekDates[0]);
+  const nextWeekPublished = (() => {
+    if (!published || !publishedWeekStart) return false;
+    // publishedWeekStart is the Sunday of the published week (ISO string)
+    // currentRealWeekDates[6] is Saturday of current week
+    // If published week starts AFTER current week's Saturday → it's next week or later
+    const pubDate = new Date(publishedWeekStart);
+    pubDate.setHours(0,0,0,0);
+    const curSat = new Date(currentRealWeekDates[6]);
+    curSat.setHours(0,0,0,0);
+    return pubDate > curSat; // published week is after current week
+  })();
   // Debug: log comparison
-  if (published && !currentUser?.isManager) console.log('[DEBUG] publishedWeekStart:', publishedWeekStart, '| nextWeekDates[0]:', dateKey(nextWeekDates[0]), '| match:', nextWeekPublished);
+  if (published && !currentUser?.isManager) console.log('[DEBUG] publishedWeekStart:', publishedWeekStart, '| nextWeekDates[0]:', dateKey(nextWeekDates[0]), '| nextWeekPublished:', nextWeekPublished);
   const [dayRemarks, setDayRemarks] = useState({}); // dateKey -> ["הורדת מבצע", ...]
   const [shiftNotes, setShiftNotes] = useState({}); // dateKey_shiftId -> string
   const [empShiftNotes, setEmpShiftNotes] = useState({}); // empId_dateKey_shiftId -> string
@@ -994,11 +1010,11 @@ export default function App() {
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
               <div style={{fontWeight:"800",fontSize:16}}>📅 שבוע {formatDateShort(weekDates[0])} – {formatDateShort(weekDates[6])}</div>
               <div style={{display:"flex",alignItems:"center",gap:6,background:"#f1f5f9",borderRadius:"8px",padding:"3px 8px"}}>
-                <button style={{background:"none",border:"none",color:"#1e293b",cursor:"pointer",fontSize:16,padding:"0 4px"}} onClick={()=>setWeekOffset(w=>w-1)}>◄</button>
+                <button style={{background:"none",border:"none",color:"#1e293b",cursor:"pointer",fontSize:16,padding:"0 4px"}} onClick={()=>setWeekOffset(w=>w-1)}>הקודם</button>
                 <span style={{fontSize:11,color:"#64748b",minWidth:60,textAlign:"center"}}>
                   {weekOffset===0?"הבא":weekOffset===1?"שבועיים":`+${weekOffset+1} שבועות`}
                 </span>
-                <button style={{background:"none",border:"none",color:"#1e293b",cursor:"pointer",fontSize:16,padding:"0 4px"}} onClick={()=>setWeekOffset(w=>w+1)}>►</button>
+                <button style={{background:"none",border:"none",color:"#1e293b",cursor:"pointer",fontSize:16,padding:"0 4px"}} onClick={()=>setWeekOffset(w=>w+1)}>הבא</button>
               </div>
             </div>
             <div style={{color:"#64748b",fontSize:12,marginTop:3}}>
@@ -1618,11 +1634,11 @@ export default function App() {
         <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
           {/* Week navigation */}
           <div style={{display:"flex",alignItems:"center",gap:4,background:"rgba(255,255,255,0.1)",borderRadius:"8px",padding:"3px 8px",direction:"rtl"}}>
-            <button style={{background:"none",border:"none",color:"#f8fafc",cursor:"pointer",fontSize:16,padding:"0 4px"}} onClick={()=>setWeekOffset(w=>w-1)}>◄</button>
+            <button style={{background:"none",border:"none",color:"#f8fafc",cursor:"pointer",fontSize:16,padding:"0 4px"}} onClick={()=>setWeekOffset(w=>w-1)}>הקודם</button>
             <span style={{fontSize:11,color:"#94a3b8",minWidth:110,textAlign:"center"}}>
               {formatDateShort(weekDates[0])} – {formatDateShort(weekDates[6])}
             </span>
-            <button style={{background:"none",border:"none",color:"#f8fafc",cursor:"pointer",fontSize:16,padding:"0 4px"}} onClick={()=>setWeekOffset(w=>w+1)}>►</button>
+            <button style={{background:"none",border:"none",color:"#f8fafc",cursor:"pointer",fontSize:16,padding:"0 4px"}} onClick={()=>setWeekOffset(w=>w+1)}>הבא</button>
           </div>
           {missing.length>0 && <span style={{background:"#ef4444",color:"#fff",borderRadius:"20px",padding:"2px 10px",fontSize:12,fontWeight:"700"}}>⚠️ {missing.length} חסרים</span>}
           {pendingVacations.length>0 && <span style={{background:"#f59e0b",color:"#000",borderRadius:"20px",padding:"2px 10px",fontSize:12,fontWeight:"700"}}>🌴 {pendingVacations.length} חופשות</span>}
