@@ -93,16 +93,13 @@ function saveData(d) {
 function getSchedulingWeekStart(offsetWeeks = 0, isPublished = false) {
   const today = new Date();
   const day = today.getDay(); // 0=Sun ... 6=Sat
-  // Base: if Thu(4)/Fri(5)/Sat(6) add extra week
-  const baseExtra = day >= 4 ? 1 : 0;
-  // If published, show the week after the current scheduling week
-  const publishedExtra = isPublished ? 1 : 0;
+  // Go to the most recent Sunday (start of current week)
   const sunday = new Date(today);
-  // Next Sunday
-  sunday.setDate(today.getDate() + (7 - day));
-  // Add extras
-  sunday.setDate(sunday.getDate() + (baseExtra + publishedExtra + offsetWeeks) * 7);
+  sunday.setDate(today.getDate() - day);
   sunday.setHours(0, 0, 0, 0);
+  // Add offset weeks (0 = current week, 1 = next week, etc.)
+  const publishedExtra = isPublished ? 1 : 0;
+  sunday.setDate(sunday.getDate() + (publishedExtra + offsetWeeks) * 7);
   return sunday;
 }
 
@@ -318,7 +315,16 @@ export default function App() {
   const [fbLoaded, setFbLoaded] = useState(false);
   const [showAutoConfirm, setShowAutoConfirm] = useState(false);
   const [sendMode, setSendMode] = useState("personal");
-  const [weekOffset, setWeekOffset] = useState(0);
+  // ברירת מחדל: לפני יום ראשון של השבוע הבא — הצג שבוע נוכחי (offset 0)
+  // מיום ראשון ואילך — הצג שבוע הבא (offset 1)
+  const defaultWeekOffset = (() => {
+    const today = new Date();
+    const day = today.getDay(); // 0=ראשון
+    // offset 0 = השבוע שמתחיל ב-Sunday האחרון שעבר
+    // נציג offset 1 רק מיום ראשון (day===0)
+    return day === 0 ? 1 : 0;
+  })();
+  const [weekOffset, setWeekOffset] = useState(defaultWeekOffset);
   const [vacations, setVacations] = useState({});
   // Friday rota form state
   const [newRotaDate, setNewRotaDate] = useState("");
@@ -350,8 +356,17 @@ export default function App() {
   const weekDates = getWeekDates(weekOffset, false); // תמיד מציג את שבוע הסידור הנוכחי
   const currentRealWeekDates = getCurrentWeekDates(); // השבוע האמיתי הנוכחי לעובד
   const nextWeekDates = getWeekDates(weekOffset+1, false);
-  // next week published = published flag exists for next week (use same published state + offset check)
-  const nextWeekPublished = published && weekOffset===0; // simplified: if current published, next may be
+  // next week published — check if Firebase has published=true for next week offset
+  const [nextWeekPublished, setNextWeekPublished] = useState(false);
+  useEffect(() => {
+    // Check if next week schedule is published in Firestore
+    const nextKey = `published_${dateKey(nextWeekDates[0])}`;
+    getDoc(doc(db,"pharmacy","schedule")).then(snap=>{
+      if(!snap.exists()) return;
+      const d = snap.data();
+      setNextWeekPublished(d[nextKey] === true);
+    }).catch(()=>{});
+  }, [nextWeekDates[0]?.toISOString()]);
   const [dayRemarks, setDayRemarks] = useState({}); // dateKey -> ["הורדת מבצע", ...]
   const [shiftNotes, setShiftNotes] = useState({}); // dateKey_shiftId -> string
   const [empShiftNotes, setEmpShiftNotes] = useState({}); // empId_dateKey_shiftId -> string
@@ -1002,20 +1017,20 @@ export default function App() {
 
           {/* Mobile schedule — single scrollable table */}
           {empTab==="schedule" && published && (()=>{
-            const displayDates = showNextWeek ? weekDates : currentRealWeekDates;
+            const displayDates = showNextWeek ? nextWeekDates : currentRealWeekDates;
             return (
             <div style={{marginTop:4}}>
               {/* Next week banner */}
-              {!showNextWeek && (
+              {!showNextWeek && nextWeekPublished && (
                 <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:8,padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10,cursor:"pointer"}} onClick={()=>setShowNextWeek(true)}>
                   <div>
                     <div style={{fontSize:13,fontWeight:"600",color:"#15803d"}}>🎉 הסידור לשבוע הבא מוכן!</div>
-                    <div style={{fontSize:11,color:"#16a34a",marginTop:2}}>{formatDateShort(weekDates[0])} – {formatDateShort(weekDates[6])}</div>
+                    <div style={{fontSize:11,color:"#16a34a",marginTop:2}}>{formatDateShort(nextWeekDates[0])} – {formatDateShort(nextWeekDates[6])}</div>
                   </div>
                   <button style={{fontSize:12,color:"#15803d",background:"#bbf7d0",border:"1.5px solid #86efac",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontWeight:"600",flexShrink:0}}>הצג ›</button>
                 </div>
               )}
-              {!showNextWeek && !published && (
+              {!showNextWeek && !nextWeekPublished && (
                 <div style={{background:"#fef2f2",border:"1px solid #fca5a5",borderRadius:8,padding:"10px 14px",marginBottom:10}}>
                   <div style={{fontSize:13,fontWeight:"600",color:"#dc2626",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                     <span>🙄 הסידור לשבוע הבא עוד לא מוכן —</span>
@@ -1025,7 +1040,7 @@ export default function App() {
               )}
               {showNextWeek && (
                 <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:8,padding:"8px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                  <span style={{fontSize:12,fontWeight:"600",color:"#15803d"}}>שבוע {formatDateShort(weekDates[0])} – {formatDateShort(weekDates[6])}</span>
+                  <span style={{fontSize:12,fontWeight:"600",color:"#15803d"}}>שבוע {formatDateShort(nextWeekDates[0])} – {formatDateShort(nextWeekDates[6])}</span>
                   <button style={{fontSize:11,border:"none",background:"none",color:"#64748b",cursor:"pointer",textDecoration:"underline"}} onClick={()=>setShowNextWeek(false)}>‹ חזור לשבוע הנוכחי</button>
                 </div>
               )}
@@ -1039,15 +1054,15 @@ export default function App() {
                 }
               `}</style>
               <div className="sched-scroll-wrap" style={{direction:"ltr"}}>
-                <table style={{borderCollapse:"collapse",fontSize:14,minWidth:700,background:"#fff",direction:"rtl"}}>
+                <table style={{borderCollapse:"collapse",fontSize:14,width:"100%",tableLayout:"fixed",background:"#fff",direction:"rtl"}}>
                   <thead>
                     <tr style={{background:"#1D9E75",color:"#fff"}}>
-                      <th style={{padding:"8px 8px",border:"0.5px solid #0F6E56",width:52,textAlign:"center",fontSize:10,fontWeight:"500",position:"sticky",left:0,background:"#1D9E75",zIndex:2}}></th>
+                      <th style={{padding:"8px 8px",border:"0.5px solid #0F6E56",width:46,textAlign:"center",fontSize:10,fontWeight:"500",position:"sticky",left:0,background:"#1D9E75",zIndex:2}}></th>
                       {displayDates.map(date=>{
                         const midnight=new Date(date); midnight.setHours(23,59,59,0);
                         const isPast=midnight<new Date();
                         return (
-                          <th key={dateKey(date)} style={{padding:"9px 6px",border:"0.5px solid #0F6E56",textAlign:"center",minWidth:90,opacity:isPast?0.5:1}}>
+                          <th key={dateKey(date)} style={{padding:"9px 6px",border:"0.5px solid #0F6E56",textAlign:"center",opacity:isPast?0.5:1}}>
                             <div style={{fontSize:15,fontWeight:"800"}}>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
                             <div style={{fontSize:14,fontWeight:"800",color:"#E1F5EE",marginTop:2}}>{formatDateShort(date)}</div>
                           </th>
@@ -1086,7 +1101,7 @@ export default function App() {
                         ];
                         const shiftNote=ms?getShiftNote(date,ms.id):"";
                         return (
-                          <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:4,verticalAlign:"top",background:isPast?"#edf0f4":"#fff",cursor:allEmps.length?"pointer":"default",minWidth:100}}
+                          <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:4,verticalAlign:"top",background:isPast?"#edf0f4":"#fff",cursor:allEmps.length?"pointer":"default"}}
                             onClick={()=>allEmps.length&&ms&&openShiftModal("☀️ משמרת בוקר",date,ms,["רוקח","פרח"])}>
                             {allEmps.map(({id,sh,label})=>{
                               const emp=employees.find(e=>e.id===id);
@@ -1124,7 +1139,7 @@ export default function App() {
                         ];
                         const shiftNote=getShiftNote(date,es.id);
                         return (
-                          <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:4,verticalAlign:"top",background:isPast?"#edf0f4":"#fff",cursor:allEmps.length?"pointer":"default",minWidth:100}}
+                          <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:4,verticalAlign:"top",background:isPast?"#edf0f4":"#fff",cursor:allEmps.length?"pointer":"default"}}
                             onClick={()=>allEmps.length&&openShiftModal("🌙 משמרת ערב",date,es,["רוקח","פרח"])}>
                             {allEmps.map(({id,sh})=>{
                               const emp=employees.find(e=>e.id===id);
@@ -1602,8 +1617,8 @@ export default function App() {
           {/* Week navigation */}
           <div style={{display:"flex",alignItems:"center",gap:4,background:"rgba(255,255,255,0.1)",borderRadius:"8px",padding:"3px 8px"}}>
             <button style={{background:"none",border:"none",color:"#f8fafc",cursor:"pointer",fontSize:16,padding:"0 4px"}} onClick={()=>setWeekOffset(w=>w-1)}>◀</button>
-            <span style={{fontSize:11,color:"#94a3b8",minWidth:90,textAlign:"center"}}>
-              {weekOffset===0?"שבוע נוכחי":weekOffset===1?"שבוע הבא":`+${weekOffset} שבועות`}
+            <span style={{fontSize:11,color:"#94a3b8",minWidth:110,textAlign:"center"}}>
+              {formatDateShort(weekDates[0])} – {formatDateShort(weekDates[6])}
             </span>
             <button style={{background:"none",border:"none",color:"#f8fafc",cursor:"pointer",fontSize:16,padding:"0 4px"}} onClick={()=>setWeekOffset(w=>w+1)}>▶</button>
           </div>
@@ -1704,12 +1719,12 @@ export default function App() {
               {hoveredEmp && <button style={{marginRight:"auto",padding:"2px 8px",border:"0.5px solid #e2e8f0",borderRadius:6,background:"#fff",fontSize:11,color:"#64748b",cursor:"pointer"}} onClick={()=>setHoveredEmp(null)}>ניקוי</button>}
             </div>
             <div className="sim-scroll" style={{direction:"ltr"}}>
-              <table style={{borderCollapse:"collapse",fontSize:14,minWidth:700,background:"#fff",direction:"rtl"}}>
+              <table style={{borderCollapse:"collapse",fontSize:14,width:"100%",tableLayout:"fixed",background:"#fff",direction:"rtl"}}>
                 <thead>
                   <tr style={{background:"#1D9E75",color:"#fff"}}>
-                    <th style={{padding:"9px 6px",border:"0.5px solid #0F6E56",width:52,textAlign:"center",fontSize:10,fontWeight:"500",position:"sticky",left:0,background:"#1D9E75",zIndex:2}}></th>
+                    <th style={{padding:"9px 6px",border:"0.5px solid #0F6E56",width:46,textAlign:"center",fontSize:10,fontWeight:"500",position:"sticky",left:0,background:"#1D9E75",zIndex:2}}></th>
                     {weekDates.map(date=>(
-                      <th key={dateKey(date)} style={{padding:"9px 6px",border:"0.5px solid #0F6E56",textAlign:"center",minWidth:90,whiteSpace:"nowrap"}}>
+                      <th key={dateKey(date)} style={{padding:"9px 6px",border:"0.5px solid #0F6E56",textAlign:"center"}}>
                         <div style={{fontSize:15,fontWeight:"800"}}>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
                         <div style={{fontSize:14,fontWeight:"800",color:"#E1F5EE",marginTop:2}}>{formatDateShort(date)}</div>
                       </th>
@@ -2046,7 +2061,16 @@ export default function App() {
               <div style={S.sTitle}>📤 שלח סידור</div>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 {/* Publish in app */}
-                <button style={{...S.btn(published?"#22c55e":"#0ea5e9"),padding:12,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={()=>{setPublished(true);showToast("פורסם ✓");}}>
+                <button style={{...S.btn(published?"#22c55e":"#0ea5e9"),padding:12,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={()=>{
+                  setPublished(true);
+                  // Save published flag with week date key so employees can check next week
+                  const pubKey = `published_${dateKey(weekDates[0])}`;
+                  getDoc(doc(db,"pharmacy","schedule")).then(snap=>{
+                    const data = snap.exists() ? snap.data() : {};
+                    setDoc(doc(db,"pharmacy","schedule"), {...data, [pubKey]: true}, {merge:true});
+                  }).catch(()=>{});
+                  showToast("פורסם ✓");
+                }}>
                   {published?"✓ פורסם באפליקציה":"✅ פרסם באפליקציה לעובדים"}
                 </button>
                 {/* Download & Share image */}
