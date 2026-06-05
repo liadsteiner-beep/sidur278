@@ -358,6 +358,8 @@ export default function App() {
   const lastEmpClickRef = useRef({id:null, time:0, date:null, sh:null});
   const [scheduleChanged, setScheduleChanged] = useState(false);
   const [showChangeModal, setShowChangeModal] = useState(false);
+  const [changeDetails, setChangeDetails] = useState([]); // what changed
+  const [timeEditModal, setTimeEditModal] = useState(null); // {id, name, date, sh, role}
 
   // ── Friday Duty System ──
   const [dutyPeriod, setDutyPeriod] = useState(null);     // {start:"DD/MM/YYYY", end:"DD/MM/YYYY", quotas:{empId:n}}
@@ -453,7 +455,18 @@ export default function App() {
         const lastSeen = localStorage.getItem(CHANGE_KEY);
         const currentHash = JSON.stringify(d.assigned);
         if (lastSeen && lastSeen !== currentHash) {
+          // Find what changed
+          const prev = JSON.parse(lastSeen);
+          const changes = [];
+          Object.keys({...prev,...d.assigned}).forEach(k => {
+            const prevIds = prev[k]||[];
+            const currIds = d.assigned[k]||[];
+            const added = currIds.filter(x=>!prevIds.includes(x));
+            const removed = prevIds.filter(x=>!currIds.includes(x));
+            if(added.length||removed.length) changes.push({k,added,removed});
+          });
           setScheduleChanged(true);
+          setChangeDetails(changes);
         }
         localStorage.setItem(CHANGE_KEY, currentHash);
       }
@@ -1783,16 +1796,28 @@ export default function App() {
         </div>
         {changePwModal && <ChangePwModal />}
         {showChangeModal && (
-          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={e=>{if(e.target===e.currentTarget)setShowChangeModal(false);}}>
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={e=>{if(e.target===e.currentTarget){setShowChangeModal(false);setScheduleChanged(false);}}}>
             <div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"20px 20px 36px",width:"100%",maxWidth:480}}>
               <div style={{width:40,height:4,background:"#e2e8f0",borderRadius:2,margin:"0 auto 16px"}}></div>
               <div style={{fontSize:18,fontWeight:"700",color:"#1e293b",marginBottom:4}}>🔔 עדכון לסידור</div>
-              <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>השיבוץ עודכן מאז כניסתך האחרונה</div>
-              <div style={{background:"#fffbeb",border:"1px solid #fcd34d",borderRadius:10,padding:"12px 14px",marginBottom:10}}>
-                <div style={{fontSize:14,fontWeight:"600",color:"#92400e",marginBottom:4}}>💡 מה השתנה?</div>
-                <div style={{fontSize:13,color:"#78350f"}}>הסידור עודכן — עיין/י בטבלה לראות את השיבוץ הנוכחי.</div>
+              <div style={{fontSize:13,color:"#64748b",marginBottom:14}}>השינויים מאז כניסתך האחרונה:</div>
+              <div style={{maxHeight:240,overflowY:"auto",marginBottom:12}}>
+                {changeDetails.length>0 ? changeDetails.slice(0,10).map((c,i)=>{
+                  const parts=c.k.split("_");
+                  const shiftId=parts[parts.length-1];
+                  const shiftLabel=["morning","open"].includes(shiftId)?"☀️ בוקר":"🌙 ערב";
+                  const dateStr=parts.slice(0,3).join("/");
+                  return <div key={i} style={{padding:"8px 12px",borderRadius:10,marginBottom:6,background:c.added.length?"#f0fdf4":"#fef2f2",border:`1px solid ${c.added.length?"#86efac":"#fca5a5"}`}}>
+                    <div style={{fontSize:13,fontWeight:"600",color:"#1e293b",marginBottom:3}}>{shiftLabel} {dateStr}</div>
+                    {c.added.map(id=><div key={id} style={{fontSize:12,color:"#15803d",fontWeight:"500"}}>➕ נוסף: {employees.find(e=>e.id===id)?.name||id}</div>)}
+                    {c.removed.map(id=><div key={id} style={{fontSize:12,color:"#dc2626",fontWeight:"500"}}>➖ הוסר: {employees.find(e=>e.id===id)?.name||id}</div>)}
+                  </div>;
+                }) : <div style={{fontSize:13,color:"#64748b",background:"#f8fafc",borderRadius:10,padding:"12px"}}>הסידור עודכן — עיין/י בטבלה לפרטים</div>}
               </div>
-              <button style={{width:"100%",padding:13,border:"none",borderRadius:12,background:"#1D9E75",color:"#fff",fontSize:15,fontWeight:"700",cursor:"pointer"}} onClick={()=>setShowChangeModal(false)}>הבנתי, הצג סידור</button>
+              <button style={{width:"100%",padding:13,border:"none",borderRadius:12,background:"#1D9E75",color:"#fff",fontSize:15,fontWeight:"700",cursor:"pointer"}}
+                onClick={()=>{setShowChangeModal(false);setScheduleChanged(false);}}>
+                הבנתי ✓
+              </button>
             </div>
           </div>
         )}
@@ -2003,8 +2028,8 @@ export default function App() {
                                 const now=Date.now();
                                 const last=lastEmpClickRef.current;
                                 if(last.id===id && now-last.time<400) {
-                                  // double click — open shift modal
-                                  openShiftModal("☀️ משמרת בוקר",date,sh,["רוקח","פרח"]);
+                                  // double click — open time edit modal
+                                  setTimeEditModal({id, name:emp?.name, date, sh, role:emp?.role||"רוקח"});
                                   lastEmpClickRef.current={id:null,time:0};
                                 } else {
                                   // single click — highlight
@@ -2052,7 +2077,7 @@ export default function App() {
                                 const now=Date.now();
                                 const last=lastEmpClickRef.current;
                                 if(last.id===id && now-last.time<400) {
-                                  openShiftModal("🌙 משמרת ערב",date,sh,["רוקח","פרח"]);
+                                  setTimeEditModal({id, name:emp?.name, date, sh, role:emp?.role||"רוקח"});
                                   lastEmpClickRef.current={id:null,time:0};
                                 } else {
                                   setHoveredEmp(hoveredEmp===id?null:id);
@@ -2204,6 +2229,7 @@ export default function App() {
                                         onDrop={e=>{ e.preventDefault(); handleDrop(date,shift.id,role,id); }}
                                         className="emp-btn emp-assigned"
                                         onClick={()=>toggleAssign(date,shift.id,role,id)}
+                                        onDoubleClick={e=>{e.stopPropagation(); setTimeEditModal({id, name:emp?.name, date, sh:shift, role});}}
                                         style={{borderRadius:"6px",padding:"3px 5px",fontSize:11,fontWeight:"700",color:"#14532d",cursor:"grab",width:"100%",transition:"all 0.15s",background:"#dcfce7",border:"2px solid #22c55e"}}>
                                         ✓ {emp?.name}
                                       </button>
@@ -2214,32 +2240,6 @@ export default function App() {
                                         onChange={e=>setEmpShiftNote(id,date,shift.id,e.target.value)}
                                         onClick={e=>e.stopPropagation()}
                                       />
-                                      {/* Time override - two inputs with auto HH:MM */}
-                                      <div style={{display:"flex",alignItems:"center",gap:2,marginTop:2}} onClick={e=>e.stopPropagation()}>
-                                        <input
-                                          style={{flex:1,fontSize:9,padding:"2px 3px",border:"1px solid #c7d2fe",borderRadius:4,color:"#1e293b",background:"#eef2ff",textAlign:"center",fontWeight:"600",direction:"ltr",boxSizing:"border-box"}}
-                                          placeholder="08:30"
-                                          maxLength={5}
-                                          value={(getEmpShiftNote(id,date,shift.id+"|st"))||""}
-                                          onChange={e=>{
-                                            let v=e.target.value.replace(/[^0-9:]/g,"");
-                                            if(v.length===4&&!v.includes(":")) v=v.slice(0,2)+":"+v.slice(2);
-                                            setEmpShiftNote(id,date,shift.id+"|st",v);
-                                          }}
-                                        />
-                                        <span style={{fontSize:9,color:"#94a3b8"}}>—</span>
-                                        <input
-                                          style={{flex:1,fontSize:9,padding:"2px 3px",border:"1px solid #c7d2fe",borderRadius:4,color:"#1e293b",background:"#eef2ff",textAlign:"center",fontWeight:"600",direction:"ltr",boxSizing:"border-box"}}
-                                          placeholder="16:00"
-                                          maxLength={5}
-                                          value={(getEmpShiftNote(id,date,shift.id+"|en"))||""}
-                                          onChange={e=>{
-                                            let v=e.target.value.replace(/[^0-9:]/g,"");
-                                            if(v.length===4&&!v.includes(":")) v=v.slice(0,2)+":"+v.slice(2);
-                                            setEmpShiftNote(id,date,shift.id+"|en",v);
-                                          }}
-                                        />
-                                      </div>
 
                                     </div>
                                   );
@@ -2873,9 +2873,55 @@ export default function App() {
       </div>
 
       {changePwModal && <ChangePwModal />}
+      {timeEditModal && <TimeEditModal />}
       {toast && <div style={S.toast(toast.type)}>{toast.msg}</div>}
     </div>
   );
+
+  function TimeEditModal() {
+    const { id, name, date, sh, role } = timeEditModal;
+    const existing = getEmpShiftNote(id, date, sh.id+"|st");
+    const existingEnd = getEmpShiftNote(id, date, sh.id+"|en");
+    const defTime = getShiftTime(sh, role);
+    const [defSt, defEn] = defTime.split("-");
+    const [stVal, setStVal] = useState(existing || defSt || "");
+    const [enVal, setEnVal] = useState(existingEnd || defEn || "");
+    const fmt = v => { let s=v.replace(/[^0-9]/g,""); if(s.length>=3) s=s.slice(0,2)+":"+s.slice(2,4); return s; };
+    return (
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={e=>{if(e.target===e.currentTarget)setTimeEditModal(null);}}>
+        <div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"20px 20px 36px",width:"100%",maxWidth:480,direction:"rtl"}}>
+          <div style={{width:40,height:4,background:"#e2e8f0",borderRadius:2,margin:"0 auto 16px"}}></div>
+          <div style={{fontSize:17,fontWeight:"700",color:"#1e293b",marginBottom:4}}>✏️ שינוי שעות — {name}</div>
+          <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>{sh.label} • {date?.toLocaleDateString?.("he-IL",{weekday:"short",day:"numeric",month:"numeric"})}</div>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12,color:"#64748b",marginBottom:4,textAlign:"center"}}>התחלה</div>
+              <input style={{width:"100%",fontSize:18,padding:"11px 10px",border:"1.5px solid #1D9E75",borderRadius:10,color:"#1e293b",fontWeight:"700",boxSizing:"border-box",direction:"ltr",textAlign:"center"}}
+                value={stVal} placeholder={defSt}
+                onChange={e=>setStVal(fmt(e.target.value))} maxLength={5}/>
+            </div>
+            <div style={{fontSize:22,color:"#94a3b8",fontWeight:"300",marginTop:18}}>—</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12,color:"#64748b",marginBottom:4,textAlign:"center"}}>סיום</div>
+              <input style={{width:"100%",fontSize:18,padding:"11px 10px",border:"1.5px solid #1D9E75",borderRadius:10,color:"#1e293b",fontWeight:"700",boxSizing:"border-box",direction:"ltr",textAlign:"center"}}
+                value={enVal} placeholder={defEn}
+                onChange={e=>setEnVal(fmt(e.target.value))} maxLength={5}/>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button style={{flex:1,padding:12,border:"1.5px solid #e2e8f0",borderRadius:10,background:"#f8fafc",color:"#64748b",fontSize:14,fontWeight:"700",cursor:"pointer"}}
+              onClick={()=>{ setEmpShiftNote(id,date,sh.id+"|st",""); setEmpShiftNote(id,date,sh.id+"|en",""); setTimeEditModal(null); showToast("שעות אופסו ✓"); }}>
+              אפס
+            </button>
+            <button style={{flex:2,padding:12,border:"none",borderRadius:10,background:"#1D9E75",color:"#fff",fontSize:14,fontWeight:"700",cursor:"pointer"}}
+              onClick={()=>{ if(stVal) setEmpShiftNote(id,date,sh.id+"|st",stVal); if(enVal) setEmpShiftNote(id,date,sh.id+"|en",enVal); setTimeEditModal(null); showToast("שעות עודכנו ✓"); }}>
+              שמור
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   function ChangePwModal() {
     const isManager = changePwModal === "manager";
