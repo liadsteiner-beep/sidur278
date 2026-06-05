@@ -864,8 +864,8 @@ export default function App() {
 
   function openWhatsApp(phone, text) {
     const num = phone.replace(/\D/g,"");
-    const phone = num.startsWith("0") ? `972${num.slice(1)}` : num;
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`,"_blank");
+    const phoneNum = num.startsWith("0") ? `972${num.slice(1)}` : num;
+    window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(text)}`,"_blank");
   }
 
   function sendGroupReminder() {
