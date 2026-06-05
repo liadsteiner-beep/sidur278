@@ -1469,7 +1469,7 @@ export default function App() {
               <div style={{fontSize:12,color:"#64748b",textAlign:"center",marginTop:8}}>לחצי על משמרת לפרטים • סובב לתצוגה מלאה</div>
 
               <div style={{display:"flex",gap:8,marginTop:10}}>
-                <button style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,padding:11,borderRadius:10,border:"none",fontSize:13,fontWeight:"500",cursor:"pointer",background:"#E1F5EE",color:"#085041"}}
+                <button style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,padding:11,borderRadius:10,border:"none",fontSize:13,fontWeight:"500",cursor:"pointer",background:"#A8E3CB",color:"#085041"}}
                   onClick={async()=>{
                     const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
                     const container = document.createElement("div");
