@@ -1527,12 +1527,8 @@ export default function App() {
                       });
                     });
                     if(!myShiftsForICS.length){showToast("אין משמרות לייצוא","err");return;}
-                    let ics = "BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Harish Pharmacy//Schedule//HE
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-";
+                    const CRLF = "\r\n";
+                    let ics = "BEGIN:VCALENDAR" + CRLF + "VERSION:2.0" + CRLF + "PRODID:-//Harish Pharmacy//Schedule//HE" + CRLF + "CALSCALE:GREGORIAN" + CRLF + "METHOD:PUBLISH" + CRLF;
                     myShiftsForICS.forEach(({date,sh},i)=>{
                       const isMorning = ["morning","open"].includes(sh.id);
                       const icon = isMorning ? "☀️" : "🌙";
@@ -1540,24 +1536,17 @@ METHOD:PUBLISH
                       const customTime = getEmpShiftTime(currentUser.id, date, sh.id);
                       const timeStr = customTime || sh.time;
                       const [startT, endT] = timeStr.split("-");
-                      const [sh_end_h] = endT.split(":").map(Number);
-                      const [sh_start_h] = startT.split(":").map(Number);
+                      const sh_end_h = parseInt(endT.split(":")[0], 10);
+                      const sh_start_h = parseInt(startT.split(":")[0], 10);
                       const endDate = sh_end_h < sh_start_h ? new Date(date.getTime()+86400000) : date;
-                      const uid = `shift-${currentUser.id}-${dateKey(date)}-${sh.id}@harish-pharmacy`;
-                      ics += `BEGIN:VEVENT
-`;
-                      ics += `UID:${uid}
-`;
-                      ics += `DTSTART:${toICSDate(date, startT)}
-`;
-                      ics += `DTEND:${toICSDate(endDate, endT)}
-`;
-                      ics += `SUMMARY:${icon} משמרת ${label} ${timeStr}
-`;
-                      ics += `LOCATION:בית מרקחת חריש
-`;
-                      ics += `END:VEVENT
-`;
+                      const uid = "shift-" + currentUser.id + "-" + dateKey(date) + "-" + sh.id + "@harish-pharmacy";
+                      ics += "BEGIN:VEVENT" + CRLF;
+                      ics += "UID:" + uid + CRLF;
+                      ics += "DTSTART:" + toICSDate(date, startT) + CRLF;
+                      ics += "DTEND:" + toICSDate(endDate, endT) + CRLF;
+                      ics += "SUMMARY:" + icon + " משמרת " + label + " " + timeStr + CRLF;
+                      ics += "LOCATION:בית מרקחת חריש" + CRLF;
+                      ics += "END:VEVENT" + CRLF;
                     });
                     ics += "END:VCALENDAR";
                     const blob = new Blob([ics], {type:"text/calendar;charset=utf-8"});
@@ -1939,35 +1928,6 @@ METHOD:PUBLISH
                 if(getAssigned(date,sh.id,myRole).includes(currentUser.id)) mySlots.push({date,sh});
               });
             });
-            if(!mySlots.length) return null;
-            function exportICS() {
-              const pad = n => String(n).padStart(2,"0");
-              function toICSDate(d, timeStr) {
-                const [h,m] = timeStr.split(":").map(Number);
-                const dt = new Date(d); dt.setHours(h, m, 0, 0);
-                return `${dt.getFullYear()}${pad(dt.getMonth()+1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
-              }
-              let ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//pharmacy-schedule//HE\nCALSCALE:GREGORIAN\n";
-              mySlots.forEach(({date, sh},i)=>{
-                const [startT, endT] = sh.time.split("-");
-                const [sh_end_h] = endT.split(":").map(Number);
-                const [sh_start_h] = startT.split(":").map(Number);
-                const endDate = sh_end_h < sh_start_h ? new Date(date.getTime()+86400000) : date;
-                ics += `BEGIN:VEVENT\n`;
-                ics += `UID:shift-${currentUser.id}-${i}@pharmacy-harish\n`;
-                ics += `DTSTART:${toICSDate(date, startT)}\n`;
-                ics += `DTEND:${toICSDate(endDate, endT)}\n`;
-                ics += `SUMMARY:משמרת ${sh.label} — ${APP_NAME}\n`;
-                ics += `DESCRIPTION:${sh.label} (${sh.time})\n`;
-                ics += `END:VEVENT\n`;
-              });
-              ics += "END:VCALENDAR";
-              const blob = new Blob([ics], {type:"text/calendar;charset=utf-8"});
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a"); a.href = url; a.download = "משמרות.ics"; a.click();
-              URL.revokeObjectURL(url);
-              showToast("קובץ יומן הורד ✓");
-            }
             return null;
           })()}
           </div>)}
