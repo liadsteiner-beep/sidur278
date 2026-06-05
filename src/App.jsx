@@ -1512,26 +1512,25 @@ export default function App() {
                 </button>
                 <button style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,padding:11,borderRadius:10,border:"none",fontSize:13,fontWeight:"500",cursor:"pointer",background:"#6366f1",color:"#fff"}}
                   onClick={()=>{
-                    const pad = n => String(n).padStart(2,"0");
-                    function toICSDate(d, timeStr) {
-                      const [h,m] = timeStr.split(":").map(Number);
-                      const dt = new Date(d); dt.setHours(h, m, 0, 0);
-                      return `${dt.getFullYear()}${pad(dt.getMonth()+1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
-                    }
-                    const myShiftsForICS = [];
+                    // Build list of shifts to add
+                    const myShiftsForCal = [];
                     empDisplayDates.forEach(date=>{
                       (DAY_SHIFTS[date.getDay()]||[]).forEach(sh=>{
                         if(getAssigned(date,sh.id,currentUser.role).includes(currentUser.id)){
-                          myShiftsForICS.push({date,sh});
+                          myShiftsForCal.push({date,sh});
                         }
                       });
                     });
-                    if(!myShiftsForICS.length){showToast("אין משמרות לייצוא","err");return;}
-                    const CRLF = "\r\n";
-                    let ics = "BEGIN:VCALENDAR" + CRLF + "VERSION:2.0" + CRLF + "PRODID:-//Harish Pharmacy//Schedule//HE" + CRLF + "CALSCALE:GREGORIAN" + CRLF + "METHOD:PUBLISH" + CRLF;
-                    myShiftsForICS.forEach(({date,sh},i)=>{
+                    if(!myShiftsForCal.length){showToast("אין משמרות לייצוא","err");return;}
+                    const pad = n => String(n).padStart(2,"0");
+                    function toGCal(d, timeStr) {
+                      const [h,m] = timeStr.split(":").map(Number);
+                      const dt = new Date(d); dt.setHours(h,m,0,0);
+                      return dt.getFullYear()+""+pad(dt.getMonth()+1)+""+pad(dt.getDate())+"T"+pad(dt.getHours())+""+pad(dt.getMinutes())+"00";
+                    }
+                    // Open Google Calendar link for each shift (with small delay between)
+                    myShiftsForCal.forEach(({date,sh},i)=>{
                       const isMorning = ["morning","open"].includes(sh.id);
-                      const icon = isMorning ? "☀️" : "🌙";
                       const label = isMorning ? "בוקר" : sh.id==="close" ? "סגירה" : "ערב";
                       const customTime = getEmpShiftTime(currentUser.id, date, sh.id);
                       const timeStr = customTime || sh.time;
@@ -1539,28 +1538,15 @@ export default function App() {
                       const sh_end_h = parseInt(endT.split(":")[0], 10);
                       const sh_start_h = parseInt(startT.split(":")[0], 10);
                       const endDate = sh_end_h < sh_start_h ? new Date(date.getTime()+86400000) : date;
-                      const uid = "shift-" + currentUser.id + "-" + dateKey(date) + "-" + sh.id + "@harish-pharmacy";
-                      ics += "BEGIN:VEVENT" + CRLF;
-                      ics += "UID:" + uid + CRLF;
-                      ics += "DTSTART:" + toICSDate(date, startT) + CRLF;
-                      ics += "DTEND:" + toICSDate(endDate, endT) + CRLF;
-                      ics += "SUMMARY:" + icon + " משמרת " + label + " " + timeStr + CRLF;
-                      ics += "LOCATION:בית מרקחת חריש" + CRLF;
-                      ics += "END:VEVENT" + CRLF;
+                      const start = toGCal(date, startT);
+                      const end   = toGCal(endDate, endT);
+                      const title = encodeURIComponent((isMorning?"☀️":"🌙")+" משמרת "+label+" "+timeStr);
+                      const url   = "https://calendar.google.com/calendar/render?action=TEMPLATE&text="+title+"&dates="+start+"/"+end;
+                      setTimeout(()=>window.open(url,"_blank"), i*600);
                     });
-                    ics += "END:VCALENDAR";
-                    const blob = new Blob([ics], {type:"text/calendar;charset=utf-8"});
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = "משמרות.ics";
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    showToast("קובץ יומן הורד ✓");
+                    showToast("פותח יומן גוגל לכל משמרת...");
                   }}>
-                  📅 יומן
+                  📅 הוסף ליומן
                 </button>
               </div>
 
