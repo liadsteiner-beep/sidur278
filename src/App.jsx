@@ -487,35 +487,6 @@ export default function App() {
       }
       if (d.dutySetupStep) setDutySetupStep(d.dutySetupStep);
       setFbLoaded(true);
-      if (d.assigned) {
-        const CHANGE_KEY = "pharmacy_last_assigned";
-        const lastSeen = localStorage.getItem(CHANGE_KEY);
-        const currentHash = JSON.stringify(d.assigned);
-        if (lastSeen && lastSeen !== currentHash) {
-          setScheduleChanged(true);
-          // Compute diff
-          try {
-            const prev = JSON.parse(lastSeen);
-            const diff = [];
-            const allKeys = new Set([...Object.keys(prev), ...Object.keys(d.assigned||{})]);
-            allKeys.forEach(k => {
-              const prevIds = prev[k] || [];
-              const newIds = (d.assigned||{})[k] || [];
-              const added   = newIds.filter(id => !prevIds.includes(id));
-              const removed = prevIds.filter(id => !newIds.includes(id));
-              if (added.length || removed.length) {
-                const parts = k.split("_");
-                const dateStr = parts[0];
-                const shiftId = parts[1];
-                const role    = parts.slice(2).join("_");
-                diff.push({ dateStr, shiftId, role, added, removed });
-              }
-            });
-            setScheduleChangeDiff(diff);
-          } catch {}
-        }
-        localStorage.setItem(CHANGE_KEY, currentHash);
-      }
       const session = loadSession();
       if (session) {
         if (session.isManager) {
@@ -526,6 +497,36 @@ export default function App() {
           if (emp && d.empPasswords?.[emp.id]) {
             setCurrentUser({...emp,...session});
             setEmpNoteInput((d.empNotes||{})[emp.id]||"");
+            // בדיקת שינוי סידור — פר-עובד, רק בכניסה הראשונה
+            if (d.assigned) {
+              const CHANGE_KEY = `pharmacy_last_assigned_${emp.id}`;
+              const lastSeen = localStorage.getItem(CHANGE_KEY);
+              const currentHash = JSON.stringify(d.assigned);
+              if (lastSeen && lastSeen !== currentHash) {
+                setScheduleChanged(true);
+                try {
+                  const prev = JSON.parse(lastSeen);
+                  const diff = [];
+                  const allKeys = new Set([...Object.keys(prev), ...Object.keys(d.assigned||{})]);
+                  allKeys.forEach(k => {
+                    const prevIds = prev[k] || [];
+                    const newIds = (d.assigned||{})[k] || [];
+                    const added   = newIds.filter(id => !prevIds.includes(id));
+                    const removed = prevIds.filter(id => !newIds.includes(id));
+                    if (added.length || removed.length) {
+                      const parts = k.split("_");
+                      const dateStr = parts[0];
+                      const shiftId = parts[1];
+                      const role    = parts.slice(2).join("_");
+                      diff.push({ dateStr, shiftId, role, added, removed });
+                    }
+                  });
+                  setScheduleChangeDiff(diff);
+                } catch {}
+              }
+              // שמור את המצב הנוכחי לכניסה הבאה
+              localStorage.setItem(CHANGE_KEY, currentHash);
+            }
             setView("employee");
           } else {
             setView("login");
@@ -1236,7 +1237,7 @@ export default function App() {
             {published && <button style={{...S.tab(empTab==="schedule"),flex:1,borderRadius:7,fontSize:14}} onClick={()=>setEmpTab("schedule")}>📋 סידור</button>}
             <button style={{...S.tab(empTab==="avail"),flex:1,borderRadius:7,fontSize:14}} onClick={()=>setEmpTab("avail")}>✏️ זמינות</button>
             <button style={{...S.tab(empTab==="vac"),flex:1,borderRadius:7,fontSize:14}} onClick={()=>setEmpTab("vac")}>🌴 חופשים</button>
-            {myRole==="רוקח" && (dutyAvailOpen||dutyPublished) && <button style={{...S.tab(empTab==="duty"),flex:1,borderRadius:7,fontSize:14}} onClick={()=>setEmpTab("duty")}>⭐ תורנות</button>}
+            {myRole==="רוקח" && (dutyAvailOpen||dutyPublished) && <button style={{...S.tab(empTab==="duty"),flex:1,borderRadius:7,fontSize:13}} onClick={()=>setEmpTab("duty")}>⭐ תורנות שישי</button>}
             <button style={{...S.tab(empTab==="note"),flex:1,borderRadius:7,fontSize:14}} onClick={()=>setEmpTab("note")}>📝 הערה</button>
           </div>
 
