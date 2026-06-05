@@ -497,31 +497,33 @@ export default function App() {
           if (emp && d.empPasswords?.[emp.id]) {
             setCurrentUser({...emp,...session});
             setEmpNoteInput((d.empNotes||{})[emp.id]||"");
-            // בדיקת שינוי סידור — פר-עובד, רק בכניסה הראשונה
-            if (d.assigned) {
+            // בדיקת שינוי סידור — פר-עובד, פעם אחת בלבד לכניסה
+            const SESSION_CHECKED_KEY = `schedule_check_done_${emp.id}`;
+            const alreadyChecked = sessionStorage.getItem(SESSION_CHECKED_KEY);
+            if (!alreadyChecked && d.assigned) {
+              sessionStorage.setItem(SESSION_CHECKED_KEY, "1");
               const CHANGE_KEY = `pharmacy_last_assigned_${emp.id}`;
               const lastSeen = localStorage.getItem(CHANGE_KEY);
               const currentHash = JSON.stringify(d.assigned);
               if (lastSeen && lastSeen !== currentHash) {
-                setScheduleChanged(true);
                 try {
                   const prev = JSON.parse(lastSeen);
                   const diff = [];
                   const allKeys = new Set([...Object.keys(prev), ...Object.keys(d.assigned||{})]);
                   allKeys.forEach(k => {
-                    const prevIds = prev[k] || [];
-                    const newIds = (d.assigned||{})[k] || [];
-                    const added   = newIds.filter(id => !prevIds.includes(id));
-                    const removed = prevIds.filter(id => !newIds.includes(id));
-                    if (added.length || removed.length) {
+                    const pIds = prev[k]||[];
+                    const nIds = (d.assigned||{})[k]||[];
+                    const added   = nIds.filter(id=>!pIds.includes(id));
+                    const removed = pIds.filter(id=>!nIds.includes(id));
+                    if (added.length || removed.length || JSON.stringify(pIds) !== JSON.stringify(nIds)) {
                       const parts = k.split("_");
-                      const dateStr = parts[0];
-                      const shiftId = parts[1];
-                      const role    = parts.slice(2).join("_");
-                      diff.push({ dateStr, shiftId, role, added, removed });
+                      diff.push({ dateStr:parts[0], shiftId:parts[1], role:parts.slice(2).join("_"), added, removed });
                     }
                   });
-                  setScheduleChangeDiff(diff);
+                  if (diff.length > 0) {
+                    setScheduleChanged(true);
+                    setScheduleChangeDiff(diff);
+                  }
                 } catch {}
               }
               // שמור את המצב הנוכחי לכניסה הבאה
@@ -1508,6 +1510,69 @@ export default function App() {
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.139.564 4.147 1.547 5.889L.057 23.456a.5.5 0 0 0 .614.614l5.694-1.49A11.94 11.94 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.006-1.374l-.36-.213-3.723.975.993-3.63-.234-.374A9.818 9.818 0 1 1 12 21.818z"/></svg>
                   שתף
                 </button>
+                <button style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,padding:11,borderRadius:10,border:"none",fontSize:13,fontWeight:"500",cursor:"pointer",background:"#6366f1",color:"#fff"}}
+                  onClick={()=>{
+                    const pad = n => String(n).padStart(2,"0");
+                    function toICSDate(d, timeStr) {
+                      const [h,m] = timeStr.split(":").map(Number);
+                      const dt = new Date(d); dt.setHours(h, m, 0, 0);
+                      return `${dt.getFullYear()}${pad(dt.getMonth()+1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
+                    }
+                    const myShiftsForICS = [];
+                    empDisplayDates.forEach(date=>{
+                      (DAY_SHIFTS[date.getDay()]||[]).forEach(sh=>{
+                        if(getAssigned(date,sh.id,currentUser.role).includes(currentUser.id)){
+                          myShiftsForICS.push({date,sh});
+                        }
+                      });
+                    });
+                    if(!myShiftsForICS.length){showToast("אין משמרות לייצוא","err");return;}
+                    let ics = "BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Harish Pharmacy//Schedule//HE
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+";
+                    myShiftsForICS.forEach(({date,sh},i)=>{
+                      const isMorning = ["morning","open"].includes(sh.id);
+                      const icon = isMorning ? "☀️" : "🌙";
+                      const label = isMorning ? "בוקר" : sh.id==="close" ? "סגירה" : "ערב";
+                      const customTime = getEmpShiftTime(currentUser.id, date, sh.id);
+                      const timeStr = customTime || sh.time;
+                      const [startT, endT] = timeStr.split("-");
+                      const [sh_end_h] = endT.split(":").map(Number);
+                      const [sh_start_h] = startT.split(":").map(Number);
+                      const endDate = sh_end_h < sh_start_h ? new Date(date.getTime()+86400000) : date;
+                      const uid = `shift-${currentUser.id}-${dateKey(date)}-${sh.id}@harish-pharmacy`;
+                      ics += `BEGIN:VEVENT
+`;
+                      ics += `UID:${uid}
+`;
+                      ics += `DTSTART:${toICSDate(date, startT)}
+`;
+                      ics += `DTEND:${toICSDate(endDate, endT)}
+`;
+                      ics += `SUMMARY:${icon} משמרת ${label} ${timeStr}
+`;
+                      ics += `LOCATION:בית מרקחת חריש
+`;
+                      ics += `END:VEVENT
+`;
+                    });
+                    ics += "END:VCALENDAR";
+                    const blob = new Blob([ics], {type:"text/calendar;charset=utf-8"});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "משמרות.ics";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showToast("קובץ יומן הורד ✓");
+                  }}>
+                  📅 יומן
+                </button>
               </div>
 
               {(()=>{
@@ -1903,13 +1968,7 @@ export default function App() {
               URL.revokeObjectURL(url);
               showToast("קובץ יומן הורד ✓");
             }
-            return (
-              <div style={{...S.card,background:"#f0fdf4",border:"1px solid #86efac"}}>
-                <div style={S.sTitle}>📅 הוסף משמרות ליומן</div>
-                <div style={{fontSize:12,color:"#64748b",marginBottom:10}}>הורד קובץ .ics — פתח אותו בנייד</div>
-                <button style={{...S.btn("#22c55e"),width:"100%"}} onClick={exportICS}>📥 הורד למכשיר ({mySlots.length} משמרות)</button>
-              </div>
-            );
+            return null;
           })()}
           </div>)}
 
