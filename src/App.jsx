@@ -357,6 +357,7 @@ export default function App() {
   const dragRef = useRef(null);
   const lastEmpClickRef = useRef({id:null, time:0, date:null, sh:null});
   const [scheduleChanged, setScheduleChanged] = useState(false);
+  const [scheduleChangeDiff, setScheduleChangeDiff] = useState([]); // [{dateStr, shiftId, role, added[], removed[]}]
   const [showChangeModal, setShowChangeModal] = useState(false);
 
   // ── Time edit modal (long-press in assign / double-click in sim) ──
@@ -463,6 +464,26 @@ export default function App() {
         const currentHash = JSON.stringify(d.assigned);
         if (lastSeen && lastSeen !== currentHash) {
           setScheduleChanged(true);
+          // Compute diff
+          try {
+            const prev = JSON.parse(lastSeen);
+            const diff = [];
+            const allKeys = new Set([...Object.keys(prev), ...Object.keys(d.assigned||{})]);
+            allKeys.forEach(k => {
+              const prevIds = prev[k] || [];
+              const newIds = (d.assigned||{})[k] || [];
+              const added   = newIds.filter(id => !prevIds.includes(id));
+              const removed = prevIds.filter(id => !newIds.includes(id));
+              if (added.length || removed.length) {
+                const parts = k.split("_");
+                const dateStr = parts[0];
+                const shiftId = parts[1];
+                const role    = parts.slice(2).join("_");
+                diff.push({ dateStr, shiftId, role, added, removed });
+              }
+            });
+            setScheduleChangeDiff(diff);
+          } catch {}
         }
         localStorage.setItem(CHANGE_KEY, currentHash);
       }
@@ -853,7 +874,7 @@ export default function App() {
       dateFull: formatDateShort(date),
       dayObj: date,
     }));
-    const colW = Math.floor((1536-100)/7);
+    const colW = Math.floor((1488-100)/7);
 
     const empBlock = (emp) => {
       const noteHtml = emp.note ? `<div style="font-size:22px;color:#334155;font-style:italic;margin-top:4px;">${emp.note}</div>` : "";
@@ -872,7 +893,7 @@ export default function App() {
       return `<td style="border:1px solid #e2e8f0;vertical-align:top;background:#fff;padding:0;">${inner}</td>`;
     };
 
-    let html = `<div style="direction:rtl;font-family:Segoe UI,Tahoma,Arial,sans-serif;background:#fff;">`;
+    let html = `<div style="direction:rtl;font-family:Segoe UI,Tahoma,Arial,sans-serif;background:#fff;padding:24px 48px;box-sizing:border-box;">`;
     html += `<table style="border-collapse:collapse;width:100%;table-layout:fixed;background:#fff;">`;
     html += `<thead><tr>`;
     html += `<th style="width:100px;background:#1D9E75;border:0.5px solid #0F6E56;"></th>`;
@@ -999,9 +1020,9 @@ export default function App() {
         <div style={{background:"#fff",borderRadius:16,padding:24,width:"100%",maxWidth:320,boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
           <div style={{fontWeight:"800",fontSize:15,marginBottom:2}}>⏰ שינוי שעות</div>
           <div style={{fontSize:12,color:"#64748b",marginBottom:16}}>{timeEditModal.empName} — {formatDate(timeEditModal.date)}</div>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,direction:"ltr"}}>
             <div style={{flex:1}}>
-              <div style={{fontSize:11,color:"#64748b",marginBottom:4}}>התחלה</div>
+              <div style={{fontSize:11,color:"#64748b",marginBottom:4,direction:"rtl"}}>התחלה</div>
               <input
                 style={{...S.input,width:"100%",fontSize:17,textAlign:"center",fontWeight:"700",direction:"ltr"}}
                 placeholder="08:30"
@@ -1012,11 +1033,12 @@ export default function App() {
                   if(v.length===4&&!v.includes(":")) v=v.slice(0,2)+":"+v.slice(2);
                   setSt(v);
                 }}
+                autoFocus
               />
             </div>
             <span style={{fontSize:20,color:"#94a3b8",marginTop:16}}>—</span>
             <div style={{flex:1}}>
-              <div style={{fontSize:11,color:"#64748b",marginBottom:4}}>סיום</div>
+              <div style={{fontSize:11,color:"#64748b",marginBottom:4,direction:"rtl"}}>סיום</div>
               <input
                 style={{...S.input,width:"100%",fontSize:17,textAlign:"center",fontWeight:"700",direction:"ltr"}}
                 placeholder="16:00"
@@ -1259,7 +1281,7 @@ export default function App() {
                       {empDisplayDates.map(date=>{
                         const remarks=getRemarks(date);
                         return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:3,background:"#fff",textAlign:"center"}}>
-                          {remarks.length>0&&<span style={{display:"inline-block",border:"1.5px solid #7c3aed",borderRadius:4,padding:"1px 4px",fontSize:9,fontWeight:"600",color:"#6d28d9",background:"#ede9fe",width:"100%"}}>{remarks.join(" | ")}</span>}
+                          {remarks.length>0&&<span style={{display:"block",border:"1.5px solid #7c3aed",borderRadius:4,padding:"1px 4px",fontSize:9,fontWeight:"600",color:"#6d28d9",background:"#ede9fe",width:"100%",boxSizing:"border-box",overflow:"hidden",wordBreak:"break-all",whiteSpace:"normal",lineHeight:1.3}}>{remarks.join(" | ")}</span>}
                         </td>;
                       })}
                     </tr>
@@ -1350,7 +1372,7 @@ export default function App() {
                   onClick={async()=>{
                     const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
                     const container = document.createElement("div");
-                    container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px 48px;";
+                    container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#fff;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;";
                     container.innerHTML = buildImageHTML();
                     document.body.appendChild(container);
                     await new Promise(r=>setTimeout(r,200));
@@ -1369,7 +1391,7 @@ export default function App() {
                   onClick={async()=>{
                     const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
                     const container = document.createElement("div");
-                    container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px 48px;";
+                    container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#fff;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;";
                     container.innerHTML = buildImageHTML();
                     document.body.appendChild(container);
                     await new Promise(r=>setTimeout(r,200));
@@ -1783,11 +1805,37 @@ export default function App() {
               <div style={{width:40,height:4,background:"#e2e8f0",borderRadius:2,margin:"0 auto 16px"}}></div>
               <div style={{fontSize:18,fontWeight:"700",color:"#1e293b",marginBottom:4}}>🔔 עדכון לסידור</div>
               <div style={{fontSize:13,color:"#64748b",marginBottom:16}}>השיבוץ עודכן מאז כניסתך האחרונה</div>
-              <div style={{background:"#fffbeb",border:"1px solid #fcd34d",borderRadius:10,padding:"12px 14px",marginBottom:10}}>
-                <div style={{fontSize:14,fontWeight:"600",color:"#92400e",marginBottom:4}}>💡 מה השתנה?</div>
-                <div style={{fontSize:13,color:"#78350f"}}>הסידור עודכן — עיין/י בטבלה לראות את השיבוץ הנוכחי.</div>
-              </div>
-              <button style={{width:"100%",padding:13,border:"none",borderRadius:12,background:"#1D9E75",color:"#fff",fontSize:15,fontWeight:"700",cursor:"pointer"}} onClick={()=>setShowChangeModal(false)}>הבנתי, הצג סידור</button>
+              {scheduleChangeDiff.length > 0 ? (
+                <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16,maxHeight:260,overflowY:"auto"}}>
+                  {scheduleChangeDiff.map((d, i) => {
+                    const dateObj = new Date(d.dateStr);
+                    const dateLabel = isNaN(dateObj.getTime()) ? d.dateStr : formatDate(dateObj);
+                    const shiftLabel = d.shiftId==="morning"?"בוקר":d.shiftId==="evening"?"ערב":d.shiftId==="open"?"פתיחה":d.shiftId==="close"?"סגירה":d.shiftId;
+                    return (
+                      <div key={i} style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:"10px 14px"}}>
+                        <div style={{fontSize:13,fontWeight:"700",color:"#1e293b",marginBottom:6}}>{dateLabel} — {shiftLabel}</div>
+                        {d.added.map(id => {
+                          const emp = employees.find(e=>e.id===id);
+                          return emp ? <div key={id} style={{fontSize:13,color:"#15803d",display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                            <span style={{fontSize:15,fontWeight:"700"}}>+</span> {emp.name} <span style={{fontSize:11,background:"#dcfce7",color:"#15803d",padding:"1px 7px",borderRadius:12,fontWeight:"700"}}>{emp.role}</span>
+                          </div> : null;
+                        })}
+                        {d.removed.map(id => {
+                          const emp = employees.find(e=>e.id===id);
+                          return emp ? <div key={id} style={{fontSize:13,color:"#dc2626",display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                            <span style={{fontSize:15,fontWeight:"700"}}>−</span> {emp.name} <span style={{fontSize:11,background:"#fee2e2",color:"#dc2626",padding:"1px 7px",borderRadius:12,fontWeight:"700"}}>{emp.role}</span>
+                          </div> : null;
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{background:"#fffbeb",border:"1px solid #fcd34d",borderRadius:10,padding:"12px 14px",marginBottom:10}}>
+                  <div style={{fontSize:13,color:"#78350f"}}>הסידור עודכן — לחצי על אחת מהמשמרות לפרטים מלאים.</div>
+                </div>
+              )}
+              <button style={{width:"100%",padding:13,border:"none",borderRadius:12,background:"#1D9E75",color:"#fff",fontSize:15,fontWeight:"700",cursor:"pointer"}} onClick={()=>{setShowChangeModal(false);setScheduleChangeDiff([]);}}>הבנתי ✓</button>
             </div>
           </div>
         )}
@@ -1968,7 +2016,7 @@ export default function App() {
                     {weekDates.map(date=>{
                       const remarks=getRemarks(date);
                       return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",padding:3,background:"#fff",textAlign:"center"}}>
-                        {remarks.length>0&&<span style={{display:"inline-block",border:"1.5px solid #7c3aed",borderRadius:4,padding:"1px 4px",fontSize:9,fontWeight:"600",color:"#6d28d9",background:"#ede9fe",width:"100%"}}>{remarks.join(" | ")}</span>}
+                        {remarks.length>0&&<span style={{display:"block",border:"1.5px solid #7c3aed",borderRadius:4,padding:"1px 4px",fontSize:9,fontWeight:"600",color:"#6d28d9",background:"#ede9fe",width:"100%",boxSizing:"border-box",overflow:"hidden",wordBreak:"break-all",whiteSpace:"normal",lineHeight:1.3}}>{remarks.join(" | ")}</span>}
                       </td>;
                     })}
                   </tr>
@@ -2080,7 +2128,7 @@ export default function App() {
                 onClick={async()=>{
                   const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
                   const container = document.createElement("div");
-                  container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px 48px;";
+                  container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#fff;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;";
                   container.innerHTML = buildImageHTML();
                   document.body.appendChild(container);
                   await new Promise(r=>setTimeout(r,200));
@@ -2099,7 +2147,7 @@ export default function App() {
                 onClick={async()=>{
                   const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
                   const container = document.createElement("div");
-                  container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px 48px;";
+                  container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#fff;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;";
                   container.innerHTML = buildImageHTML();
                   document.body.appendChild(container);
                   await new Promise(r=>setTimeout(r,200));
@@ -2351,7 +2399,7 @@ export default function App() {
                     onClick={async()=>{
                       const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
                       const container = document.createElement("div");
-                      container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px 48px;";
+                      container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#fff;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;";
                       container.innerHTML = buildImageHTML();
                       document.body.appendChild(container);
                       await new Promise(r=>setTimeout(r,200));
@@ -2367,7 +2415,7 @@ export default function App() {
                     onClick={async()=>{
                       const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
                       const container = document.createElement("div");
-                      container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#f8fafc;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;padding:24px 48px;";
+                      container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#fff;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;";
                       container.innerHTML = buildImageHTML();
                       document.body.appendChild(container);
                       await new Promise(r=>setTimeout(r,200));
