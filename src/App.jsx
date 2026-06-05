@@ -1259,10 +1259,10 @@ export default function App() {
             return (
               <div style={{background:"#faf5ff",border:"1.5px solid #a78bfa",borderRadius:10,padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10}}>
                 <div>
-                  <div style={{fontSize:14,fontWeight:"700",color:"#6d28d9"}}>⭐ נא להשתבץ לתורנות שישי</div>
-                  <div style={{fontSize:12,color:"#7c3aed",marginTop:2}}>סמני זמינות לימי השישי הקרובים</div>
+                  <div style={{fontSize:14,fontWeight:"700",color:"#6d28d9"}}>⭐ תורנות שישי פתוחה לשיבוץ</div>
+                  <div style={{fontSize:12,color:"#7c3aed",marginTop:2}}>סמני את הזמינות שלך לימי השישי</div>
                 </div>
-                <button style={{...S.btn("#7c3aed"),fontSize:13,padding:"8px 14px",flexShrink:0}} onClick={()=>setEmpTab("duty")}>לשיבוץ ›</button>
+                <button style={{...S.btn("#7c3aed"),fontSize:13,padding:"8px 14px",flexShrink:0}} onClick={()=>setEmpTab("duty")}>השתבץ ›</button>
               </div>
             );
           })()}
