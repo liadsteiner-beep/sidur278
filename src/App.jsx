@@ -358,6 +358,9 @@ export default function App() {
   const lastEmpClickRef = useRef({id:null, time:0, date:null, sh:null});
   const [scheduleChanged, setScheduleChanged] = useState(false);
   const [scheduleChangeDiff, setScheduleChangeDiff] = useState([]); // [{dateStr, shiftId, role, added[], removed[]}]
+  const [dutyPublishedSeen, setDutyPublishedSeen] = useState(() => {
+    try { return localStorage.getItem("duty_published_seen_v1") === "true"; } catch { return false; }
+  });
   const [showChangeModal, setShowChangeModal] = useState(false);
 
   // ── Time edit modal (long-press in assign / double-click in sim) ──
@@ -455,7 +458,14 @@ export default function App() {
       if (d.dutyAvail)    setDutyAvail(d.dutyAvail);
       if (d.dutyAssign)   setDutyAssign(d.dutyAssign);
       if (d.dutyPublished) setDutyPublished(d.dutyPublished);
-      if (d.dutyAvailOpen !== undefined) setDutyAvailOpen(d.dutyAvailOpen);
+      if (d.dutyAvailOpen !== undefined) {
+        setDutyAvailOpen(d.dutyAvailOpen);
+      }
+      if (d.dutyPublished !== undefined && !d.dutyPublished) {
+        // New duty period started — reset seen flag so new published banner shows
+        setDutyPublishedSeen(false);
+        try { localStorage.removeItem("duty_published_seen_v1"); } catch {}
+      }
       if (d.dutySetupStep) setDutySetupStep(d.dutySetupStep);
       setFbLoaded(true);
       if (d.assigned) {
@@ -1241,6 +1251,43 @@ export default function App() {
             );
           })()}
 
+          {/* ── Duty: "נא להשתבץ" banner ── */}
+          {empTab==="schedule" && myRole==="רוקח" && dutyAvailOpen && !dutyPublished && (()=>{
+            const DUTY_SAVED_KEY = `duty_avail_saved_${currentUser.id}`;
+            const alreadySaved = localStorage.getItem(DUTY_SAVED_KEY) === "true";
+            if (alreadySaved) return null;
+            return (
+              <div style={{background:"#faf5ff",border:"1.5px solid #a78bfa",borderRadius:10,padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10}}>
+                <div>
+                  <div style={{fontSize:14,fontWeight:"700",color:"#6d28d9"}}>⭐ נא להשתבץ לתורנות שישי</div>
+                  <div style={{fontSize:12,color:"#7c3aed",marginTop:2}}>סמני זמינות לימי השישי הקרובים</div>
+                </div>
+                <button style={{...S.btn("#7c3aed"),fontSize:13,padding:"8px 14px",flexShrink:0}} onClick={()=>setEmpTab("duty")}>לשיבוץ ›</button>
+              </div>
+            );
+          })()}
+
+          {/* ── Duty: "פורסם" banner (one-time) ── */}
+          {empTab==="schedule" && myRole==="רוקח" && dutyPublished && !dutyPublishedSeen && (
+            <div style={{background:"#ede9fe",border:"1.5px solid #7c3aed",borderRadius:10,padding:"12px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:"700",color:"#4c1d95"}}>📋 פורסם לוח תורנויות שישי</div>
+                <div style={{fontSize:12,color:"#6d28d9",marginTop:2}}>לחצי לצפייה בתורנויות שלך</div>
+              </div>
+              <div style={{display:"flex",gap:6,flexShrink:0}}>
+                <button style={{...S.btn("#6d28d9"),fontSize:13,padding:"8px 14px"}} onClick={()=>{
+                  setEmpTab("duty");
+                  setDutyPublishedSeen(true);
+                  try { localStorage.setItem("duty_published_seen_v1","true"); } catch {}
+                }}>צפייה ›</button>
+                <button style={{background:"none",border:"none",color:"#94a3b8",fontSize:18,cursor:"pointer",padding:"0 4px"}} onClick={()=>{
+                  setDutyPublishedSeen(true);
+                  try { localStorage.setItem("duty_published_seen_v1","true"); } catch {}
+                }}>✕</button>
+              </div>
+            </div>
+          )}
+
           {empTab==="schedule" && published && (
             <div style={{marginTop:4}}>
               {!showNextWeek && (
@@ -1715,7 +1762,10 @@ export default function App() {
                     </div>;
                   })}
                 </div>
-                <button style={{...S.btn("#1D9E75"),width:"100%",marginTop:12}} onClick={()=>showToast("זמינות נשמרה ✓")}>שמור זמינות</button>
+                <button style={{...S.btn("#1D9E75"),width:"100%",marginTop:12}} onClick={()=>{
+                  try { localStorage.setItem(`duty_avail_saved_${currentUser.id}`,"true"); } catch {}
+                  showToast("זמינות נשמרה ✓");
+                }}>שמור זמינות</button>
               </div>}
               {dutyPublished && <div style={S.card}>
                 <div style={S.sTitle}>⭐ תורנויות שישי — פורסם</div>
