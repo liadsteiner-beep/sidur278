@@ -1244,7 +1244,7 @@ export default function App() {
                 onClick={()=>setEmpTab("vac")}>
                 <div>
                   <div style={{fontSize:14,fontWeight:"700",color:"#15803d"}}>🌴 חופשים קרובים בצוות</div>
-                  <div style={{fontSize:12,color:"#16a34a",marginTop:2}}>{upcoming.length} חופשה{upcoming.length>1?"ות":""} מאושר{upcoming.length>1?"ות":""} — לחצי לצפייה</div>
+                  <div style={{fontSize:12,color:"#16a34a",marginTop:2}}>{upcoming.length} {upcoming.length>1?"חופשות":"חופשה"} מאושר{upcoming.length>1?"ות":""} — לחצי לצפייה</div>
                 </div>
                 <span style={{fontSize:18}}>›</span>
               </div>
