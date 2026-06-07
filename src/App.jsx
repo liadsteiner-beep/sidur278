@@ -466,7 +466,14 @@ export default function App() {
           { date:"18/7/2026", emp1:"סלאם",  emp2:"סמר"  },
           { date:"25/7/2026", emp1:"ליעד",  emp2:"ליאן" },
       ];
-      if (d.dutyAssign && d.dutyAssign.length > 0) {
+      // בדוק אם הנתונים הקיימים תקינים (ימי שישי בלבד)
+      const dutyIsValid = d.dutyAssign && d.dutyAssign.length > 0 && d.dutyAssign.every(r => {
+        const parts = r.date.split("/").map(Number);
+        if (parts.length !== 3) return false;
+        const dt = new Date(parts[2], parts[1]-1, parts[0]);
+        return dt.getDay() === 5; // שישי בלבד
+      });
+      if (dutyIsValid) {
         setDutyAssign(d.dutyAssign);
       } else {
         setDutyAssign(initialDuty);
