@@ -457,14 +457,15 @@ export default function App() {
       if (d.dutyPeriod)   setDutyPeriod(d.dutyPeriod);
       if (d.dutyAvail)    setDutyAvail(d.dutyAvail);
       const initialDuty = [
-          { date:"6/6/2026",  emp1:"ליאן",  emp2:"סלאם" },
-          { date:"13/6/2026", emp1:"ליאן",  emp2:"סג׳א" },
-          { date:"20/6/2026", emp1:"סלאם",  emp2:"סמר"  },
-          { date:"27/6/2026", emp1:"סג׳א",  emp2:"ליעד" },
-          { date:"4/7/2026",  emp1:"סלאם",  emp2:"סמר"  },
-          { date:"11/7/2026", emp1:"ליאן",  emp2:"סג׳א" },
-          { date:"18/7/2026", emp1:"סלאם",  emp2:"סמר"  },
-          { date:"25/7/2026", emp1:"ליעד",  emp2:"ליאן" },
+          { date:"5/6/2026",  emp1:"ליאן",  emp2:"סלאם" },
+          { date:"12/6/2026", emp1:"ליאן",  emp2:"סג׳א" },
+          { date:"19/6/2026", emp1:"סלאם",  emp2:"סמר"  },
+          { date:"26/6/2026", emp1:"סג׳א",  emp2:"ליעד" },
+          { date:"3/7/2026",  emp1:"סלאם",  emp2:"סמר"  },
+          { date:"10/7/2026", emp1:"ליאן",  emp2:"סג׳א" },
+          { date:"17/7/2026", emp1:"סלאם",  emp2:"סמר"  },
+          { date:"24/7/2026", emp1:"ליעד",  emp2:"ליאן" },
+          { date:"31/7/2026", emp1:"סמר",   emp2:"סג׳א" },
       ];
       // בדוק אם הנתונים הקיימים תקינים (ימי שישי בלבד)
       const dutyIsValid = d.dutyAssign && d.dutyAssign.length > 0 && d.dutyAssign.every(r => {
