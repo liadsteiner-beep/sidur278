@@ -457,10 +457,10 @@ export default function App() {
       if (d.dutyPeriod)   setDutyPeriod(d.dutyPeriod);
       if (d.dutyAvail)    setDutyAvail(d.dutyAvail);
       const initialDuty = [
-          { date:"5/6/2026",  emp1:"ליאן",  emp2:"סלאם" },
-          { date:"12/6/2026", emp1:"ליאן",  emp2:"סג׳א" },
+          { date:"5/6/2026",  emp1:"ליאן",  emp2:"סג׳א" },
+          { date:"12/6/2026", emp1:"ליאן",  emp2:"סלאם" },
           { date:"19/6/2026", emp1:"סלאם",  emp2:"סמר"  },
-          { date:"26/6/2026", emp1:"סג׳א",  emp2:"ליעד" },
+          { date:"26/6/2026", emp1:"סלאם",  emp2:"ליעד" },
           { date:"3/7/2026",  emp1:"סלאם",  emp2:"סמר"  },
           { date:"10/7/2026", emp1:"ליאן",  emp2:"סג׳א" },
           { date:"17/7/2026", emp1:"סלאם",  emp2:"סמר"  },
