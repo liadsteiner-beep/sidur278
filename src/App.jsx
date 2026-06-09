@@ -427,35 +427,48 @@ export default function App() {
         if (!hasOldNames) setEmployees(d.employees);
       }
       if (firstSnapshot) {
-        // Firebase הוא מקור האמת לזמינויות — תמיד
         const mergedAv = { ...(local?.availability||{}), ...(d.availability||{}) };
-        // הזנה ידנית של זמינות סלאם (id=2) לשבוע 14.6 — סומנה ידנית מתמונה
-        const salamManual = {
-          "2_2026-06-14_morning": true,
-          "2_2026-06-15_morning": true,
-          "2_2026-06-16_morning": true,
-          "2_2026-06-17_morning": true,
-          "2_2026-06-20_morning": true,
-          "2_2026-06-16_evening": true,
-          "2_2026-06-17_evening": true,
-          "2_2026-06-19_open":    true,
-          "2_2026-06-19_close":   true,
-        };
-        const sundusManual = {
-          "8_2026-06-14_morning": true,
-          "8_2026-06-15_morning": true,
-          "8_2026-06-17_morning": true,
-          "8_2026-06-18_morning": true,
-          "8_2026-06-17_evening": true,
-          "8_2026-06-18_evening": true,
-        };
-        // הזמינות הידנית מנצחת — לא תידרס על ידי Firebase
-        const finalAv = { ...mergedAv, ...salamManual, ...sundusManual };
-        const manualMissing = true; // תמיד כתוב — מבטיח עדכון
-        if (manualMissing) {
-          setDoc(doc(db, "pharmacy", "schedule"), { availability: finalAv }, { merge: true }).catch(console.error);
+        // גיבוי זמינויות שבוע 14.6 — נכתב פעם אחת אם חסרים
+        const BACKUP_KEY = "av_backup_week_14_6_v1";
+        const backupDone = localStorage.getItem(BACKUP_KEY);
+        if (!backupDone) {
+          const weekBackup = {
+            "1_2026-06-14_morning":true,"1_2026-06-14_evening":true,"1_2026-06-15_morning":true,
+            "1_2026-06-15_evening":true,"1_2026-06-16_morning":true,"1_2026-06-17_morning":true,
+            "1_2026-06-17_evening":true,"1_2026-06-18_morning":true,"1_2026-06-19_open":true,
+            "1_2026-06-20_morning":true,"1_2026-06-20_evening":true,
+            "2_2026-06-14_morning":true,"2_2026-06-15_morning":true,"2_2026-06-15_evening":true,
+            "2_2026-06-16_morning":true,"2_2026-06-16_evening":true,"2_2026-06-17_morning":true,
+            "2_2026-06-18_evening":true,"2_2026-06-19_open":true,"2_2026-06-19_close":true,
+            "2_2026-06-20_morning":true,
+            "3_2026-06-16_morning":true,"3_2026-06-16_evening":true,"3_2026-06-17_morning":true,
+            "3_2026-06-17_evening":true,"3_2026-06-18_morning":true,"3_2026-06-18_evening":true,
+            "3_2026-06-19_open":true,"3_2026-06-20_morning":true,
+            "4_2026-06-14_morning":true,"4_2026-06-14_evening":true,"4_2026-06-17_evening":true,
+            "6_2026-06-14_morning":true,"6_2026-06-15_morning":true,"6_2026-06-16_morning":true,
+            "6_2026-06-16_evening":true,"6_2026-06-17_morning":true,"6_2026-06-18_morning":true,
+            "6_2026-06-18_evening":true,"6_2026-06-19_open":true,"6_2026-06-20_morning":true,
+            "8_2026-06-14_morning":true,"8_2026-06-14_evening":true,"8_2026-06-15_morning":true,
+            "8_2026-06-15_evening":true,"8_2026-06-16_morning":true,"8_2026-06-16_evening":true,
+            "8_2026-06-18_morning":true,"8_2026-06-18_evening":true,
+            "9_2026-06-14_morning":true,"9_2026-06-14_evening":true,"9_2026-06-15_morning":true,
+            "9_2026-06-15_evening":true,"9_2026-06-17_morning":true,"9_2026-06-17_evening":true,
+            "9_2026-06-18_morning":true,"9_2026-06-18_evening":true,"9_2026-06-19_morning":true,
+            "9_2026-06-20_morning":true,"9_2026-06-20_evening":true,
+            "10_2026-06-15_morning":true,"10_2026-06-16_evening":true,"10_2026-06-17_evening":true,
+            "10_2026-06-18_morning":true,"10_2026-06-18_evening":true,"10_2026-06-19_morning":true,
+            "10_2026-06-20_morning":true,"10_2026-06-20_evening":true,
+            "12_2026-06-16_morning":true,"12_2026-06-17_morning":true,"12_2026-06-18_morning":true,
+            "12_2026-06-19_morning":true,"12_2026-06-20_morning":true,
+          };
+          // מיזוג: Firebase מנצח על הגיבוי (שינויים עדכניים שמרים)
+          const merged = { ...weekBackup, ...mergedAv };
+          setDoc(doc(db, "pharmacy", "schedule"), { availability: merged }, { merge: true }).catch(console.error);
+          try { localStorage.setItem(BACKUP_KEY, "1"); } catch {}
+          setAvailability(merged);
+        } else {
+          setAvailability(mergedAv);
         }
-        setAvailability(finalAv);
         firstSnapshot = false;
       } else {
         // כל עדכון מ-Firebase — עדכן זמינויות מיידית
