@@ -436,21 +436,19 @@ export default function App() {
           "2_2026-06-20_morning": true,
           "2_2026-06-16_evening": true,
           "2_2026-06-17_evening": true,
-          "2_2026-06-18_evening": true,
           "2_2026-06-19_open":    true,
           "2_2026-06-19_close":   true,
         };
         const sundusManual = {
           "8_2026-06-14_morning": true,
-          "8_2026-06-14_evening": true,
           "8_2026-06-15_morning": true,
-          "8_2026-06-15_evening": true,
           "8_2026-06-17_morning": true,
-          "8_2026-06-17_evening": true,
           "8_2026-06-18_morning": true,
+          "8_2026-06-17_evening": true,
           "8_2026-06-18_evening": true,
         };
-        const finalAv = { ...salamManual, ...sundusManual, ...mergedAv };
+        // הזמינות הידנית מנצחת — לא תידרס על ידי Firebase
+        const finalAv = { ...mergedAv, ...salamManual, ...sundusManual };
         const manualMissing = true; // תמיד כתוב — מבטיח עדכון
         if (manualMissing) {
           setDoc(doc(db, "pharmacy", "schedule"), { availability: finalAv }, { merge: true }).catch(console.error);
@@ -707,6 +705,32 @@ export default function App() {
   }
 
   // Open time edit modal
+  const dblClickRef = React.useRef ? React.useRef({}) : { current: {} };
+
+  function handleEmpClickWithDbl(empId, date, shiftId, onSingleClick) {
+    const key = empId + "_" + dateKey(date) + "_" + shiftId;
+    const now = Date.now();
+    if (dblClickRef.current[key] && now - dblClickRef.current[key] < 400) {
+      delete dblClickRef.current[key];
+      // לחיצה כפולה על כפתור זמינות — הסר זמינות
+      const k = avKey(empId, date, shiftId);
+      setAvailability(prev => {
+        const updated = { ...prev, [k]: false };
+        setDoc(doc(db, "pharmacy", "schedule"), { availability: updated }, { merge: true }).catch(console.error);
+        return updated;
+      });
+      showToast("זמינות הוסרה ✓");
+    } else {
+      dblClickRef.current[key] = now;
+      setTimeout(() => {
+        if (dblClickRef.current[key] === now) {
+          delete dblClickRef.current[key];
+          if (onSingleClick) onSingleClick();
+        }
+      }, 420);
+    }
+  }
+
   function openTimeEditModal(empId, date, shiftId) {
     const emp = employees.find(e => e.id === empId);
     setTimeEditModal({
@@ -2480,7 +2504,8 @@ export default function App() {
                                       onDragOver={e=>e.preventDefault()}
                                       onDrop={e=>{ e.preventDefault(); handleDrop(date,shift.id,role,emp.id); }}
                                       className="emp-btn emp-avail"
-                                      onClick={()=>toggleAssign(date,shift.id,role,emp.id)}
+                                      onClick={()=>handleEmpClickWithDbl(emp.id,date,shift.id,()=>toggleAssign(date,shift.id,role,emp.id))}
+                                      title="לחיצה — שבץ • לחיצה כפולה — הסר זמינות"
                                       style={{borderRadius:"6px",padding:"3px 5px",fontSize:10,fontWeight:"500",color:"#1e40af",cursor:"pointer",width:"100%",transition:"all 0.15s",background:"#dbeafe",border:"1px dashed #3b82f6"}}>
                                       + {emp.name}
                                     </button>
@@ -3021,6 +3046,7 @@ export default function App() {
               <div style={S.sTitle}>⚠️ איפוס</div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 <button style={S.btn("#ef4444")} onClick={()=>{if(window.confirm("לאפס זמינויות ושיבוצים?")) {setAvailability({});setAssigned({});setPublished(false);showToast("אופס ✓");}}}>מחק זמינויות + שיבוצים</button>
+                <button style={S.btn("#f59e0b")} onClick={()=>{if(window.confirm("לאפס שיבוצים בלבד (ללא זמינויות)?")) {setAssigned({});showToast("שיבוצים אופסו ✓");}}}>אפס שיבוצים בלבד</button>
                 <button style={S.btn("#94a3b8")} onClick={()=>{if(window.confirm("לאפס הערות עובדים?")) {setEmpNotes({});showToast("הערות נמחקו");}}}>מחק הערות</button>
               </div>
             </div>
