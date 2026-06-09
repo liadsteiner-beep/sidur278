@@ -426,9 +426,37 @@ export default function App() {
       }
       if (firstSnapshot) {
         // Firebase מנצח על זמינות — מכיל את כל שינויי העובדים
-        // local רק מוסיף מפתחות שאין ב-Firebase (שינויים לא שמורים עדיין)
         const mergedAv = { ...(local?.availability||{}), ...(d.availability||{}) };
-        setAvailability(mergedAv);
+        // הזנה ידנית של זמינות סלאם (id=2) לשבוע 14.6 — סומנה ידנית מתמונה
+        const salamManual = {
+          "2_2026-06-14_morning": true,
+          "2_2026-06-15_morning": true,
+          "2_2026-06-16_morning": true,
+          "2_2026-06-17_morning": true,
+          "2_2026-06-20_morning": true,
+          "2_2026-06-16_evening": true,
+          "2_2026-06-17_evening": true,
+          "2_2026-06-18_evening": true,
+          "2_2026-06-19_open":    true,
+          "2_2026-06-19_close":   true,
+        };
+        const finalAv = { ...salamManual, ...mergedAv };
+        const sundusManual = {
+          "8_2026-06-14_morning": true,
+          "8_2026-06-14_evening": true,
+          "8_2026-06-15_morning": true,
+          "8_2026-06-15_evening": true,
+          "8_2026-06-17_morning": true,
+          "8_2026-06-17_evening": true,
+          "8_2026-06-18_morning": true,
+          "8_2026-06-18_evening": true,
+        };
+        const finalAv = { ...salamManual, ...sundusManual, ...mergedAv };
+        const manualMissing = [...Object.keys(salamManual), ...Object.keys(sundusManual)].some(k => !mergedAv[k]);
+        if (manualMissing) {
+          setDoc(doc(db, "pharmacy", "schedule"), { availability: finalAv }, { merge: true }).catch(console.error);
+        }
+        setAvailability(finalAv);
         firstSnapshot = false;
       } else {
         if (d.availability) setAvailability(d.availability);
