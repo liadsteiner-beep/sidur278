@@ -338,6 +338,7 @@ export default function App() {
   const [fridayRota, setFridayRota]   = useState([]);
   const [published, setPublished]     = useState(false);
   const [publishedWeekStart, setPublishedWeekStart] = useState(null);
+  const [publishedAssigned, setPublishedAssigned] = useState({});
   const [toast, setToast]             = useState(null);
   const [managerTab, setManagerTab]   = useState("assign");
   const [newEmpName, setNewEmpName]   = useState("");
@@ -439,6 +440,7 @@ export default function App() {
       if (local.fridayRota)   setFridayRota(local.fridayRota);
       if (local.published)    setPublished(local.published);
       if (local.publishedWeekStart) setPublishedWeekStart(local.publishedWeekStart);
+      if (local.publishedAssigned)   setPublishedAssigned(local.publishedAssigned);
       if (local.dayRemarks)   setDayRemarks(local.dayRemarks);
       if (local.shiftNotes)   setShiftNotes(local.shiftNotes);
       if (local.empShiftNotes) {
@@ -527,6 +529,7 @@ export default function App() {
       }
       if (d.published)    setPublished(d.published);
       if (d.publishedWeekStart) setPublishedWeekStart(d.publishedWeekStart);
+      if (d.publishedAssigned)   setPublishedAssigned(d.publishedAssigned);
       if (d.dayRemarks)   setDayRemarks(d.dayRemarks);
       if (d.shiftNotes)   setShiftNotes(d.shiftNotes);
       if (d.vacations)    setVacations(d.vacations);
@@ -628,9 +631,9 @@ export default function App() {
   useEffect(() => {
     if (!fbLoaded) return;
     // שמור הכל חוץ מ-availability — זמינות נשמרת רק על ידי העובדים עצמם
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ employees, availability, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAvail, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep })); } catch {}
-    fbSave({ employees, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep });
-  }, [employees, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep]);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ employees, availability, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, publishedWeekStart, publishedAssigned, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAvail, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep })); } catch {}
+    fbSave({ employees, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, publishedWeekStart, publishedAssigned, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep });
+  }, [employees, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, publishedWeekStart, publishedAssigned, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep]);
 
   function showToast(msg, type="ok") { setToast({msg,type}); setTimeout(()=>setToast(null),3000); }
 
@@ -865,7 +868,11 @@ export default function App() {
   }
 
   const aKey      = (date,shiftId,role) => `${dateKey(date)}_${shiftId}_${role}`;
-  const getAssigned = (date,shiftId,role) => assigned[aKey(date,shiftId,role)]||[];
+  // עובדים רואים רק שיבוץ שפורסם — מנהלת רואה את השיבוץ הפעיל
+  const getAssigned = (date,shiftId,role) => {
+    const src = currentUser?.isManager ? assigned : publishedAssigned;
+    return src[aKey(date,shiftId,role)]||[];
+  };
 
   const empDisplayDates = showNextWeek && nextWeekPublished ? nextWeekDates : weekDates;
 
@@ -2414,7 +2421,8 @@ export default function App() {
           <div>
             <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
               <button style={S.btn("#7e22ce")} onClick={()=>setShowAutoConfirm(true)}>⚡ שיבוץ אוטומטי</button>
-              <button style={S.btnOut("#ef4444")} onClick={()=>{if(window.confirm("לאפס את כל השיבוצים?")) setAssigned({});}}>🗑️ אפס שיבוץ</button>
+              <button style={S.btn("#f59e0b")} onClick={()=>{if(window.confirm("לאפס שיבוצים בלבד (ללא זמינויות)?")) {setAssigned({});showToast("שיבוצים אופסו ✓");}}}>🗑️ אפס שיבוצים</button>
+              <button style={S.btnOut("#ef4444")} onClick={()=>{if(window.confirm("לאפס את כל השיבוצים?")) setAssigned({});}}>🗑️ אפס הכל</button>
               <span style={{fontSize:12,color:"#64748b"}}>לחיצה ארוכה על שם → עריכת שעות</span>
             </div>
 
@@ -2646,10 +2654,12 @@ export default function App() {
                   setPublished(true);
                   const pubWeekStart = dateKey(weekDates[0]);
                   setPublishedWeekStart(pubWeekStart);
-                  getDoc(doc(db,"pharmacy","schedule")).then(snap=>{
-                    const data = snap.exists() ? snap.data() : {};
-                    setDoc(doc(db,"pharmacy","schedule"), {...data, published: true, publishedWeekStart: pubWeekStart}, {merge:true});
-                  }).catch(()=>{});
+                  setPublishedAssigned({...assigned});
+                  setDoc(doc(db,"pharmacy","schedule"), {
+                    published: true,
+                    publishedWeekStart: pubWeekStart,
+                    publishedAssigned: assigned
+                  }, {merge:true}).catch(()=>{});
                   showToast("פורסם ✓");
                 }}>
                   {published?"✓ פורסם באפליקציה":"✅ פרסם באפליקציה לעובדים"}
@@ -3145,7 +3155,6 @@ export default function App() {
               <div style={S.sTitle}>⚠️ איפוס</div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 <button style={S.btn("#ef4444")} onClick={()=>{if(window.confirm("לאפס זמינויות ושיבוצים?")) {setAvailability({});setAssigned({});setPublished(false);showToast("אופס ✓");}}}>מחק זמינויות + שיבוצים</button>
-                <button style={S.btn("#f59e0b")} onClick={()=>{if(window.confirm("לאפס שיבוצים בלבד (ללא זמינויות)?")) {setAssigned({});showToast("שיבוצים אופסו ✓");}}}>אפס שיבוצים בלבד</button>
                 <button style={S.btn("#94a3b8")} onClick={()=>{if(window.confirm("לאפס הערות עובדים?")) {setEmpNotes({});showToast("הערות נמחקו");}}}>מחק הערות</button>
               </div>
             </div>
