@@ -440,7 +440,6 @@ export default function App() {
           "2_2026-06-19_open":    true,
           "2_2026-06-19_close":   true,
         };
-        const finalAv = { ...salamManual, ...mergedAv };
         const sundusManual = {
           "8_2026-06-14_morning": true,
           "8_2026-06-14_evening": true,
