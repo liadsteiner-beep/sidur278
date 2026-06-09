@@ -870,7 +870,9 @@ export default function App() {
   const aKey      = (date,shiftId,role) => `${dateKey(date)}_${shiftId}_${role}`;
   // עובדים רואים רק שיבוץ שפורסם — מנהלת רואה את השיבוץ הפעיל
   const getAssigned = (date,shiftId,role) => {
-    const src = currentUser?.isManager ? assigned : publishedAssigned;
+    if (currentUser?.isManager) return assigned[aKey(date,shiftId,role)]||[];
+    // לעובד — השתמש בפרסום האחרון; אם ריק תן fallback ל-assigned
+    const src = Object.keys(publishedAssigned).length > 0 ? publishedAssigned : assigned;
     return src[aKey(date,shiftId,role)]||[];
   };
 
