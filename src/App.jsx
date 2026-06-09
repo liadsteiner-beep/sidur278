@@ -635,7 +635,10 @@ export default function App() {
     if (!fbLoaded) return;
     // שמור הכל חוץ מ-availability — זמינות נשמרת רק על ידי העובדים עצמם
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ employees, availability, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, publishedWeekStart, publishedAssigned, publishedByWeek, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAvail, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep })); } catch {}
-    fbSave({ employees, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, publishedWeekStart, publishedAssigned, publishedByWeek, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep });
+    // אל תשמור assigned ריק ל-Firebase — עלול לדרוס שיבוצים קיימים
+    const saveObj = { employees, notes, empNotes, empPasswords, managerPassword, fridayRota, published, publishedWeekStart, publishedAssigned, publishedByWeek, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep };
+    if (Object.keys(assigned).length > 0) saveObj.assigned = assigned;
+    fbSave(saveObj);
   }, [employees, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, publishedWeekStart, publishedAssigned, publishedByWeek, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep]);
 
   function showToast(msg, type="ok") { setToast({msg,type}); setTimeout(()=>setToast(null),3000); }
@@ -881,17 +884,8 @@ export default function App() {
   }
 
   const aKey      = (date,shiftId,role) => `${dateKey(date)}_${shiftId}_${role}`;
-  // עובדים רואים רק שיבוץ שפורסם — מנהלת רואה את השיבוץ הפעיל
-  const getAssigned = (date,shiftId,role) => {
-    if (currentUser?.isManager) return assigned[aKey(date,shiftId,role)]||[];
-    // לעובד — חפש בהיסטוריית הפרסומים לפי שבוע
-    const weekKey = dateKey(empDisplayDates[0]);
-    const weekSrc = publishedByWeek[weekKey];
-    if (weekSrc) return weekSrc[aKey(date,shiftId,role)]||[];
-    // fallback: legacy publishedAssigned או assigned
-    if (Object.keys(publishedAssigned).length > 0) return publishedAssigned[aKey(date,shiftId,role)]||[];
-    return assigned[aKey(date,shiftId,role)]||[];
-  };
+  // מנהלת רואה assigned — עובדים רואים assigned ישירות
+  const getAssigned = (date,shiftId,role) => assigned[aKey(date,shiftId,role)]||[];
 
   const empDisplayDates = showNextWeek && nextWeekPublished ? nextWeekDates : weekDates;
 
@@ -1379,7 +1373,7 @@ export default function App() {
           </div>
 
           <div style={{display:"flex",background:"#f1f5f9",borderRadius:"10px",padding:3,gap:3,marginBottom:12}}>
-            {published && <button style={{...S.tab(empTab==="schedule"),flex:1,borderRadius:7,fontSize:14}} onClick={()=>setEmpTab("schedule")}>📋 סידור</button>}
+            {published && publishedWeekStart === dateKey(empDisplayDates[0]) && <button style={{...S.tab(empTab==="schedule"),flex:1,borderRadius:7,fontSize:14}} onClick={()=>setEmpTab("schedule")}>📋 סידור</button>}
             <button style={{...S.tab(empTab==="avail"),flex:1,borderRadius:7,fontSize:14}} onClick={()=>setEmpTab("avail")}>✏️ זמינות</button>
             <button style={{...S.tab(empTab==="vac"),flex:1,borderRadius:7,fontSize:14}} onClick={()=>setEmpTab("vac")}>🌴 חופשים</button>
             {myRole==="רוקח" && (dutyAvailOpen||dutyPublished) && <button style={{...S.tab(empTab==="duty"),flex:1,borderRadius:7,fontSize:13}} onClick={()=>setEmpTab("duty")}>⭐ תורנות שישי</button>}
@@ -1458,7 +1452,7 @@ export default function App() {
             </div>
           )}
 
-          {empTab==="schedule" && published && (
+          {empTab==="schedule" && published && publishedWeekStart === dateKey(empDisplayDates[0]) && (
             <div style={{marginTop:4}}>
               {!showNextWeek && (
                 <div style={{fontSize:12,color:"#64748b",marginBottom:8,fontWeight:"500"}}>
