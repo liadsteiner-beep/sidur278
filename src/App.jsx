@@ -16,7 +16,7 @@ const db = getFirestore(firebaseApp);
 async function fbSave(data) {
   try {
     if (typeof window !== "undefined" && window._setSaveTime) window._setSaveTime();
-    await setDoc(doc(db, "pharmacy", "schedule"), data);
+    await setDoc(doc(db, "pharmacy", "schedule"), data, { merge: true });
   } catch(e) { console.error("Firebase save error:", e); }
 }
 
@@ -558,8 +558,10 @@ export default function App() {
 
   useEffect(() => {
     if (!fbLoaded) return;
-    saveData({ employees, availability, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAvail, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep });
-  }, [employees, availability, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAvail, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep]);
+    // שמור הכל חוץ מ-availability — זמינות נשמרת רק על ידי העובדים עצמם
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ employees, availability, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAvail, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep })); } catch {}
+    fbSave({ employees, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep });
+  }, [employees, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep]);
 
   function showToast(msg, type="ok") { setToast({msg,type}); setTimeout(()=>setToast(null),3000); }
 
@@ -759,7 +761,12 @@ export default function App() {
   function toggleAv(date,shiftId) {
     if (isPastDeadline(weekOffset) && !currentUser?.isManager) { showToast("השיבוץ נעול (עבר יום שלישי 12:00)","err"); return; }
     const k = avKey(currentUser.id,date,shiftId);
-    setAvailability(prev=>({...prev,[k]:!prev[k]}));
+    setAvailability(prev => {
+      const updated = {...prev, [k]: !prev[k]};
+      // שמור זמינות ישירות ל-Firebase עם merge
+      setDoc(doc(db, "pharmacy", "schedule"), { availability: updated }, { merge: true }).catch(console.error);
+      return updated;
+    });
   }
 
   const aKey      = (date,shiftId,role) => `${dateKey(date)}_${shiftId}_${role}`;
