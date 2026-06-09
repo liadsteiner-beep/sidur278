@@ -2503,25 +2503,31 @@ export default function App() {
                                       document.querySelectorAll(`[data-empid="${emp.id}"]`).forEach(el=>el.classList.remove("emp-hov"));
                                       document.getElementById("assign-table")?.classList.remove("emp-hovering");
                                     }}>
-                                    <button
-                                      onDragOver={e=>e.preventDefault()}
-                                      onDrop={e=>{ e.preventDefault(); handleDrop(date,shift.id,role,emp.id); }}
-                                      className="emp-btn emp-avail"
-                                      onClick={()=>toggleAssign(date,shift.id,role,emp.id)}
-                                      onContextMenu={e=>{
-                                        e.preventDefault();
-                                        const k = avKey(emp.id,date,shift.id);
-                                        setAvailability(prev=>{
-                                          const updated={...prev,[k]:false};
-                                          setDoc(doc(db,"pharmacy","schedule"),{availability:updated},{merge:true}).catch(console.error);
-                                          return updated;
-                                        });
-                                        showToast(`זמינות ${emp.name} הוסרה ✓`);
-                                      }}
-                                      title="לחיצה — שבץ • לחיצה ימנית — הסר זמינות"
-                                      style={{borderRadius:"6px",padding:"3px 5px",fontSize:10,fontWeight:"500",color:"#1e40af",cursor:"pointer",width:"100%",transition:"all 0.15s",background:"#dbeafe",border:"1px dashed #3b82f6"}}>
-                                      + {emp.name}
-                                    </button>
+                                    <div style={{display:"flex",gap:2,alignItems:"center"}}>
+                                      <button
+                                        onDragOver={e=>e.preventDefault()}
+                                        onDrop={e=>{ e.preventDefault(); handleDrop(date,shift.id,role,emp.id); }}
+                                        className="emp-btn emp-avail"
+                                        onClick={()=>toggleAssign(date,shift.id,role,emp.id)}
+                                        style={{borderRadius:"6px",padding:"3px 5px",fontSize:10,fontWeight:"500",color:"#1e40af",cursor:"pointer",flex:1,transition:"all 0.15s",background:"#dbeafe",border:"1px dashed #3b82f6"}}>
+                                        + {emp.name}
+                                      </button>
+                                      <button
+                                        onClick={e=>{
+                                          e.stopPropagation();
+                                          const k = avKey(emp.id,date,shift.id);
+                                          setAvailability(prev=>{
+                                            const updated={...prev,[k]:false};
+                                            setDoc(doc(db,"pharmacy","schedule"),{availability:updated},{merge:true}).catch(console.error);
+                                            return updated;
+                                          });
+                                          showToast(`זמינות ${emp.name} הוסרה ✓`);
+                                        }}
+                                        title="הסר זמינות"
+                                        style={{background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:"4px",color:"#dc2626",fontSize:10,cursor:"pointer",padding:"2px 4px",flexShrink:0,lineHeight:1}}>
+                                        ✕
+                                      </button>
+                                    </div>
                                   </div>
                                 ))}
                                 {nonAvail.map(emp=>(
@@ -2530,7 +2536,7 @@ export default function App() {
                                     onDrop={e=>{ e.preventDefault(); handleDrop(date,shift.id,role,emp.id); }}>
                                     <button
                                       className="emp-btn emp-nonavail"
-                                      onClick={()=>{const k=avKey(emp.id,date,shift.id);setAvailability(prev=>({...prev,[k]:true}));showToast(`${emp.name} סומן/ה כזמינ/ה ✓`);}}
+                                      onClick={()=>{const k=avKey(emp.id,date,shift.id);setAvailability(prev=>{const updated={...prev,[k]:true};setDoc(doc(db,"pharmacy","schedule"),{availability:updated},{merge:true}).catch(console.error);return updated;});showToast(`${emp.name} סומן/ה כזמינ/ה ✓`);}}
                                       style={{borderRadius:"6px",padding:"2px 4px",fontSize:10,color:"#94a3b8",cursor:"pointer",width:"100%",transition:"all 0.15s",background:"transparent",border:"1px dashed #cbd5e1",opacity:0.6}}>
                                       {emp.name}
                                     </button>
