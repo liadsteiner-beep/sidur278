@@ -425,7 +425,9 @@ export default function App() {
         if (!hasOldNames) setEmployees(d.employees);
       }
       if (firstSnapshot) {
-        const mergedAv = { ...(d.availability||{}), ...(local?.availability||{}) };
+        // Firebase מנצח על זמינות — מכיל את כל שינויי העובדים
+        // local רק מוסיף מפתחות שאין ב-Firebase (שינויים לא שמורים עדיין)
+        const mergedAv = { ...(local?.availability||{}), ...(d.availability||{}) };
         setAvailability(mergedAv);
         firstSnapshot = false;
       } else {
@@ -451,7 +453,8 @@ export default function App() {
           { date:"31.7.2026", emp1:"סמר",   emp2:"סג'א" },
         ];
         setFridayRota(initialRota);
-        fbSave({ employees:d.employees||[], availability:d.availability||{}, assigned:d.assigned||{}, notes:d.notes||{}, empNotes:d.empNotes||{}, empPasswords:d.empPasswords||{}, managerPassword:d.managerPassword||MANAGER_PASSWORD_DEFAULT, fridayRota:initialRota, published:d.published||false, dayRemarks:d.dayRemarks||{}, shiftNotes:d.shiftNotes||{}, vacations:d.vacations||[], empShiftNotes:d.empShiftNotes||{} });
+        // שמור רק את הרוטה — אל תדרוס שאר הנתונים
+        setDoc(doc(db, "pharmacy", "schedule"), { fridayRota: initialRota }, { merge: true });
       }
       if (d.published)    setPublished(d.published);
       if (d.publishedWeekStart) setPublishedWeekStart(d.publishedWeekStart);
@@ -482,7 +485,7 @@ export default function App() {
         setDutyAssign(d.dutyAssign);
       } else {
         setDutyAssign(initialDuty);
-        fbSave({ ...d, dutyAssign: initialDuty, dutyPublished: true, dutyAvailOpen: false, dutyVersion: DUTY_VERSION });
+        setDoc(doc(db, "pharmacy", "schedule"), { dutyAssign: initialDuty, dutyPublished: true, dutyAvailOpen: false, dutyVersion: DUTY_VERSION }, { merge: true });
       }
       if (d.dutyPublished !== undefined) {
         setDutyPublished(d.dutyPublished);
