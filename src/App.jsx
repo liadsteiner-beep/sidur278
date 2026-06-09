@@ -84,7 +84,9 @@ const MANAGER_PASSWORD_DEFAULT = "liad2903";
 function loadLocalData() { try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
 function saveData(d) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch {}
-  fbSave(d);
+  // לא שולח availability ל-Firebase — נשמר רק על ידי העובדים עצמם
+  const { availability: _av, ...dataWithoutAvail } = d;
+  fbSave(dataWithoutAvail);
 }
 
 function getSchedulingWeekStart(offsetWeeks = 0) {
@@ -425,7 +427,7 @@ export default function App() {
         if (!hasOldNames) setEmployees(d.employees);
       }
       if (firstSnapshot) {
-        // Firebase מנצח על זמינות — מכיל את כל שינויי העובדים
+        // Firebase הוא מקור האמת לזמינויות — תמיד
         const mergedAv = { ...(local?.availability||{}), ...(d.availability||{}) };
         // הזנה ידנית של זמינות סלאם (id=2) לשבוע 14.6 — סומנה ידנית מתמונה
         const salamManual = {
@@ -456,6 +458,7 @@ export default function App() {
         setAvailability(finalAv);
         firstSnapshot = false;
       } else {
+        // כל עדכון מ-Firebase — עדכן זמינויות מיידית
         if (d.availability) setAvailability(d.availability);
       }
       if (d.assigned)     setAssigned(d.assigned);
@@ -647,19 +650,19 @@ export default function App() {
     const req = { id: Date.now(), start: startDate, end: endDate, type, note, status: "pending" };
     const updated = { ...vacations, [empId]: [...(vacations[empId]||[]), req] };
     setVacations(updated);
-    fbSave({ employees, availability, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, dayRemarks, shiftNotes, vacations: updated, empShiftNotes });
+    fbSave({ employees, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, dayRemarks, shiftNotes, vacations: updated, empShiftNotes });
     showToast("בקשת חופשה נשלחה ✓");
   }
   function approveVacation(empId, vacId) {
     const updated = { ...vacations, [empId]: (vacations[empId]||[]).map(v => v.id===vacId?{...v,status:"approved"}:v) };
     setVacations(updated);
-    fbSave({ employees, availability, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, dayRemarks, shiftNotes, vacations: updated, empShiftNotes });
+    fbSave({ employees, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, dayRemarks, shiftNotes, vacations: updated, empShiftNotes });
     showToast("חופשה אושרה ✓");
   }
   function rejectVacation(empId, vacId) {
     const updated = { ...vacations, [empId]: (vacations[empId]||[]).map(v => v.id===vacId?{...v,status:"rejected"}:v) };
     setVacations(updated);
-    fbSave({ employees, availability, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, dayRemarks, shiftNotes, vacations: updated, empShiftNotes });
+    fbSave({ employees, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, dayRemarks, shiftNotes, vacations: updated, empShiftNotes });
     showToast("חופשה נדחתה", "err");
   }
   function parseDDMMYY(str) {
@@ -2755,7 +2758,7 @@ export default function App() {
                   const empId = Number(manualVacEmp);
                   const updated = {...vacations,[empId]:[...(vacations[empId]||[]),req]};
                   setVacations(updated);
-                  fbSave({employees,availability,assigned,notes,empNotes,empPasswords,managerPassword,fridayRota,published,dayRemarks,shiftNotes,vacations:updated,empShiftNotes});
+                  fbSave({employees,assigned,notes,empNotes,empPasswords,managerPassword,fridayRota,published,dayRemarks,shiftNotes,vacations:updated,empShiftNotes});
                   setManualVacEmp(""); setManualVacStart(""); setManualVacEnd(""); setManualVacNote("");
                   showToast("חופשה נוספה ✓");
                 }}>+ הוסף חופשה מאושרת</button>
