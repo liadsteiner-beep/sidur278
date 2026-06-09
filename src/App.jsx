@@ -2663,21 +2663,25 @@ export default function App() {
             <div style={S.card}>
               <div style={S.sTitle}>📤 שלח סידור</div>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                <button style={{...S.btn(published?"#22c55e":"#0ea5e9"),padding:12,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={()=>{
+                <button style={{...S.btn(published?"#22c55e":"#0ea5e9"),padding:12,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={async()=>{
+                  // טען מ-Firebase ישירות לפני פרסום
+                  const snap = await getDoc(doc(db,"pharmacy","schedule"));
+                  const freshAssigned = snap.exists() ? (snap.data().assigned || assigned) : assigned;
                   const pubWeekStart = dateKey(weekDates[0]);
+                  setAssigned(freshAssigned);
                   setPublished(true);
                   setPublishedWeekStart(pubWeekStart);
-                  setPublishedAssigned({...assigned});
-                  setPublishedByWeek(prev => {
-                    const updated = {...prev, [pubWeekStart]: assigned};
-                    setDoc(doc(db,"pharmacy","schedule"), {
-                      published: true,
-                      publishedWeekStart: pubWeekStart,
-                      publishedAssigned: assigned,
-                      publishedByWeek: updated
-                    }, {merge:true}).catch(()=>{});
-                    return updated;
-                  });
+                  setPublishedAssigned({...freshAssigned});
+                  const updated = {...publishedByWeek, [pubWeekStart]: freshAssigned};
+                  setPublishedByWeek(updated);
+                  setDoc(doc(db,"pharmacy","schedule"), {
+                    published: true,
+                    publishedWeekStart: pubWeekStart,
+                    publishedAssigned: freshAssigned,
+                    publishedByWeek: updated,
+                    assigned: freshAssigned
+                  }, {merge:true}).catch(()=>{});
+                  showToast("פורסם ✓");
                   showToast("פורסם ✓");
                 }}>
                   {published?"✓ פורסם באפליקציה":"✅ פרסם באפליקציה לעובדים"}
