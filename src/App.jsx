@@ -353,7 +353,7 @@ export default function App() {
     const now = new Date();
     const day = now.getDay();
     const hour = now.getHours();
-    // אחרי שלישי 12:00 — הזמינות לשבוע הנוכחי נעולה, פתח שבוע הבא
+    // אחרי שלישי 12:00 — פתח שבוע הבא
     if (day > 2 || (day === 2 && hour >= 12)) return 1;
     return 0;
   });
@@ -965,14 +965,7 @@ export default function App() {
   }
 
   const aKey      = (date,shiftId,role) => `${dateKey(date)}_${shiftId}_${role}`;
-  // מנהלת רואה assigned — עובדים רואים את השבוע המפורסם הרלוונטי
-  const getAssigned = (date,shiftId,role) => {
-    if (currentUser?.isManager) return assigned[aKey(date,shiftId,role)]||[];
-    const weekKey = dateKey(empDisplayDates[0]);
-    const weekSrc = publishedByWeek[weekKey];
-    if (weekSrc) return weekSrc[aKey(date,shiftId,role)]||[];
-    return [];
-  };
+  const getAssigned = (date,shiftId,role) => assigned[aKey(date,shiftId,role)]||[];
 
   const empDisplayDates = showNextWeek && nextWeekPublished ? nextWeekDates : weekDates;
 
@@ -1447,7 +1440,7 @@ export default function App() {
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
               <div style={{fontWeight:"800",fontSize:16}}>📅 שבוע {formatDateShort(empDisplayDates[0])} – {formatDateShort(empDisplayDates[6])}</div>
               <div style={{display:"flex",alignItems:"center",gap:4,background:"#f1f5f9",borderRadius:"8px",padding:"3px 6px"}}>
-                <button style={{background:"none",border:"none",color:"#1e293b",cursor:"pointer",fontSize:13,fontWeight:"600",padding:"0 4px"}} onClick={()=>setWeekOffset(w=>Math.max(0,w-1))}>הקודם</button>
+                <button style={{background:"none",border:"none",color:"#1e293b",cursor:"pointer",fontSize:13,fontWeight:"600",padding:"0 4px"}} onClick={()=>setWeekOffset(w=>w-1)}>הקודם</button>
                 <span style={{fontSize:11,color:"#cbd5e1"}}>|</span>
                 <button style={{background:"none",border:"none",color:"#1e293b",cursor:"pointer",fontSize:13,fontWeight:"600",padding:"0 4px"}} onClick={()=>setWeekOffset(w=>w+1)}>הבא</button>
               </div>
@@ -1460,7 +1453,8 @@ export default function App() {
           </div>
 
           <div style={{display:"flex",background:"#f1f5f9",borderRadius:"10px",padding:3,gap:3,marginBottom:12}}>
-            {published && publishedByWeek[dateKey(empDisplayDates[0])] && <button style={{...S.tab(empTab==="schedule"),flex:1,borderRadius:7,fontSize:14}} onClick={()=>setEmpTab("schedule")}>📋 סידור</button>}
+            {published && Object.keys(publishedByWeek).length > 0 && publishedByWeek[dateKey(empDisplayDates[0])] && <button style={{...S.tab(empTab==="schedule"),flex:1,borderRadius:7,fontSize:14}} onClick={()=>setEmpTab("schedule")}>📋 סידור</button>}
+            {published && Object.keys(publishedByWeek).length > 0 && !publishedByWeek[dateKey(empDisplayDates[0])] && publishedWeekStart && <button style={{...S.tab(empTab==="schedule"),flex:1,borderRadius:7,fontSize:14,opacity:0.5}} onClick={()=>{const pubD=new Date(publishedWeekStart);const curD=getSchedulingWeekStart(0);const diff=Math.round((pubD-curD)/(7*24*3600*1000));setWeekOffset(diff);setEmpTab("schedule");}}>📋 סידור</button>}
             <button style={{...S.tab(empTab==="avail"),flex:1,borderRadius:7,fontSize:14}} onClick={()=>setEmpTab("avail")}>✏️ זמינות</button>
             <button style={{...S.tab(empTab==="vac"),flex:1,borderRadius:7,fontSize:14}} onClick={()=>setEmpTab("vac")}>🌴 חופשים</button>
             {myRole==="רוקח" && (dutyAvailOpen||dutyPublished) && <button style={{...S.tab(empTab==="duty"),flex:1,borderRadius:7,fontSize:13}} onClick={()=>setEmpTab("duty")}>⭐ תורנות שישי</button>}
@@ -1539,7 +1533,7 @@ export default function App() {
             </div>
           )}
 
-          {empTab==="schedule" && published && publishedByWeek[dateKey(empDisplayDates[0])] && (
+          {empTab==="schedule" && published && (publishedByWeek[dateKey(empDisplayDates[0])] || publishedWeekStart === dateKey(empDisplayDates[0])) && (
             <div style={{marginTop:4}}>
               {!showNextWeek && (
                 <div style={{fontSize:12,color:"#64748b",marginBottom:8,fontWeight:"500"}}>
