@@ -2123,8 +2123,8 @@ export default function App() {
   return (
     <div style={S.app}>
       <style>{`
-        [data-empid].emp-hov button.emp-assigned { background: #16a34a !important; border-color: #14532d !important; color: #fff !important; font-weight: 800 !important; }
-        [data-empid].emp-hov button.emp-avail { background: #2563eb !important; border-color: #1e3a8a !important; color: #fff !important; font-weight: 800 !important; }
+        [data-empid].emp-hov button.emp-assigned { background: #16a34a !important; border-color: #14532d !important; color: #fff !important; font-weight: 700 !important; font-size: 13px !important; }
+        [data-empid].emp-hov button.emp-avail { background: #2563eb !important; border-color: #1e3a8a !important; color: #fff !important; font-weight: 500 !important; font-size: 12px !important; }
         .emp-hovering [data-empid]:not(.emp-hov) button.emp-nonavail { display: none !important; }
       `}</style>
       <div style={S.header}>
