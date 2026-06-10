@@ -781,11 +781,24 @@ export default function App() {
   }
   function isOnVacation(empId, date) {
     const key = dateKey(date);
+    // פרסר DD/MM/YYYY ל-YYYY-MM-DD string ישירות (ללא UTC conversion)
+    function vacDateKey(str) {
+      if (!str) return null;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+      const sep = str.includes("/") ? "/" : str.includes(".") ? "." : null;
+      if (!sep) return null;
+      const parts = str.split(sep).map(s => parseInt(s, 10));
+      if (parts.length !== 3 || parts.some(isNaN)) return null;
+      const [d, m, y] = parts;
+      const year = y < 100 ? y + 2000 : y;
+      return `${year}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    }
     return (vacations[empId]||[]).some(v => {
       if (v.status !== "approved") return false;
-      const start = parseDDMMYY(v.start) || v.start;
-      const end = parseDDMMYY(v.end) || v.end;
-      return key >= start && key <= end;
+      const startKey = vacDateKey(v.start);
+      const endKey   = vacDateKey(v.type === "יום בודד" ? v.start : (v.end || v.start));
+      if (!startKey || !endKey) return false;
+      return key >= startKey && key <= endKey;
     });
   }
   const pendingVacations = Object.entries(vacations).flatMap(([empId,reqs])=>
