@@ -537,57 +537,7 @@ export default function App() {
       if (d.publishedAssigned)   setPublishedAssigned(d.publishedAssigned);
       if (d.publishedByWeek)     setPublishedByWeek(d.publishedByWeek);
 
-      // ── שחזור סידור 7.6 אם חסר ──
-      const WEEK_7_6 = "2026-06-07";
-      const pbw = d.publishedByWeek || {};
-      if (!pbw[WEEK_7_6] || Object.keys(pbw[WEEK_7_6]).length === 0) {
-        const restoredAssigned = {
-          "2026-06-07_morning_רוקח":[1],"2026-06-08_morning_רוקח":[6],
-          "2026-06-09_morning_רוקח":[2],"2026-06-10_morning_רוקח":[1],
-          "2026-06-11_morning_רוקח":[4],"2026-06-12_open_רוקח":[4],
-          "2026-06-12_close_רוקח":[1,6],"2026-06-13_morning_רוקח":[2],
-          "2026-06-07_morning_פרח":[7],"2026-06-08_morning_פרח":[9],
-          "2026-06-09_morning_פרח":[101],"2026-06-10_morning_פרח":[101],
-          "2026-06-11_morning_פרח":[8],"2026-06-12_open_פרח":[11],
-          "2026-06-07_evening_רוקח":[2],"2026-06-08_evening_רוקח":[1],
-          "2026-06-09_evening_רוקח":[1,6],"2026-06-10_evening_רוקח":[4],
-          "2026-06-11_evening_רוקח":[2,6],"2026-06-13_evening_רוקח":[4,6],
-          "2026-06-07_evening_פרח":[9],"2026-06-08_evening_פרח":[102],
-          "2026-06-09_evening_פרח":[9],"2026-06-10_evening_פרח":[8],
-          "2026-06-13_evening_פרח":[9],
-        };
-        const restoredNotes = {
-          "1_2026-06-12_close|st":"11:00","1_2026-06-12_close|en":"16:00","1_2026-06-12_close":"חריש בעיר",
-          "6_2026-06-09_evening|st":"15:00","6_2026-06-09_evening|en":"22:00","6_2026-06-09_evening":"חריש בעיר",
-          "6_2026-06-11_evening|st":"15:00","6_2026-06-11_evening|en":"22:00","6_2026-06-11_evening":"חריש בעיר",
-          "6_2026-06-13_evening|st":"20:20","6_2026-06-13_evening|en":"22:00","6_2026-06-13_evening":"חריש בעיר",
-          "4_2026-06-13_evening|st":"16:30","4_2026-06-13_evening|en":"23:00",
-          "9_2026-06-13_evening|st":"18:00","9_2026-06-13_evening|en":"23:00",
-          "2_2026-06-13_morning|st":"10:00","2_2026-06-13_morning|en":"16:30",
-        };
-        const recovered = {...pbw, [WEEK_7_6]: restoredAssigned};
-        setAssigned(restoredAssigned);
-        setPublishedByWeek(recovered);
-        setPublishedWeekStart(WEEK_7_6);
-        setPublished(true);
-        setPublishedAssigned(restoredAssigned);
-        setEmpShiftNotes(prev => ({...restoredNotes, ...prev}));
-        setEmployees(prev => {
-          const hasYulia = prev.some(e=>e.name==="יוליה");
-          const hasMustafa = prev.some(e=>e.name==="מוסטפה");
-          let u=[...prev];
-          if(!hasYulia) u=[...u,{id:101,name:"יוליה",role:"פרח",phone:""}];
-          if(!hasMustafa) u=[...u,{id:102,name:"מוסטפה",role:"פרח",phone:""}];
-          return u;
-        });
-        setDoc(doc(db,"pharmacy","schedule"),{
-          assigned:restoredAssigned, publishedByWeek:recovered,
-          publishedWeekStart:WEEK_7_6, published:true,
-          publishedAssigned:restoredAssigned,
-          empShiftNotes:{...restoredNotes,...(d.empShiftNotes||{})},
-        },{merge:true}).catch(console.error);
-      }
-      if (d.dayRemarks)   setDayRemarks(d.dayRemarks);
+            if (d.dayRemarks)   setDayRemarks(d.dayRemarks);
       if (d.shiftNotes)   setShiftNotes(d.shiftNotes);
       if (d.vacations)    setVacations(d.vacations);
       // Merge Firebase empShiftNotes with local edits — local wins
@@ -771,6 +721,18 @@ export default function App() {
     fbSave({ employees, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, dayRemarks, shiftNotes, vacations: updated, empShiftNotes });
     showToast("חופשה נדחתה", "err");
   }
+  function vacDateKey(str) {
+    if (!str) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    const sep = str.includes("/") ? "/" : str.includes(".") ? "." : null;
+    if (!sep) return null;
+    const parts = str.split(sep).map(s => parseInt(s, 10));
+    if (parts.length !== 3 || parts.some(isNaN)) return null;
+    const [d, m, y] = parts;
+    const year = y < 100 ? y + 2000 : y;
+    return `${year}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  }
+
   function parseDDMMYY(str) {
     if (!str) return null;
     const parts = str.split("/");
@@ -2329,15 +2291,15 @@ export default function App() {
               const onVacNow = employees.filter(emp =>
                 (vacations[emp.id]||[]).some(v => {
                   if(v.status!=="approved") return false;
-                  const start = parseDDMMYY(v.start) || v.start;
-                  const end = parseDDMMYY(v.end) || v.end;
+                  const start = vacDateKey(v.start) || v.start;
+                  const end = vacDateKey(v.end) || v.end;
                   return todayKey >= start && todayKey <= end;
                 })
               );
               const returning = employees.filter(emp =>
                 (vacations[emp.id]||[]).some(v => {
                   if(v.status!=="approved") return false;
-                  const end = parseDDMMYY(v.end) || v.end;
+                  const end = vacDateKey(v.end) || v.end;
                   return end >= todayKey;
                 })
               );
@@ -2354,7 +2316,7 @@ export default function App() {
                   {sortedReturning.map(emp=>{
                     const vac = (vacations[emp.id]||[]).find(v=>{
                       if(v.status!=="approved") return false;
-                      const end = parseDDMMYY(v.end) || v.end;
+                      const end = vacDateKey(v.end) || v.end;
                       return end >= todayKey;
                     });
                     if(!vac) return null;
