@@ -578,7 +578,7 @@ export default function App() {
           { date:"24/7/2026", emp1:"ליעד",  emp2:"ליאן" },
           { date:"31/7/2026", emp1:"סמר",   emp2:"סג׳א" },
       ];
-      const DUTY_VERSION = "v3";
+      const DUTY_VERSION = "v4";
       const savedVersion = d.dutyVersion;
       if (d.dutyAssign && d.dutyAssign.length > 0 && savedVersion === DUTY_VERSION) {
         setDutyAssign(d.dutyAssign);
