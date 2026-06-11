@@ -1130,7 +1130,7 @@ export default function App() {
       const cs = ds.find(s=>s.id==="close");
       if (!ms && !cs) { html += `<td style="border:0.5px solid #e2e8f0;background:#f8fafc;text-align:center;color:#d1d5db;font-size:28px;vertical-align:middle;">—</td>`; return; }
       const emps = [
-        ...(ms ? getAssigned(dayObj,ms.id,"רוקח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:getShiftTime(ms,"רוקח",getEmpShiftTime(id,dayObj,ms.id)),note:getEmpShiftNote(id,dayObj,ms.id)})) : []),
+        ...(ms ? getAssigned(dayObj,ms.id,"רוקח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:getShiftTime(ms,"רוקח",getEmpShiftTime(id,dayObj,ms.id)),label:ms.id==="open"?"פתיחה":"",note:getEmpShiftNote(id,dayObj,ms.id)})) : []),
         ...(cs ? getAssigned(dayObj,cs.id,"רוקח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:getShiftTime(cs,"רוקח",getEmpShiftTime(id,dayObj,cs.id)),label:"סגירה",note:getEmpShiftNote(id,dayObj,cs.id)})) : []),
         ...(ms ? getAssigned(dayObj,ms.id,"פרח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:getShiftTime(ms,"פרח",getEmpShiftTime(id,dayObj,ms.id)),note:getEmpShiftNote(id,dayObj,ms.id)})) : []),
       ];
@@ -1660,6 +1660,7 @@ export default function App() {
                         if(!ms&&!cs) return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",background:isPast?"#edf0f4":"#f8fafc",textAlign:"center",color:"#d1d5db",fontSize:10}}>—</td>;
                         const allEmps=[
                           ...(ms?getAssigned(date,ms.id,"רוקח").map(id=>({id,sh:ms,role:"רוקח"})):[]),
+                          ...(ms&&ms.id==="open"?getAssigned(date,ms.id,"רוקח").map(id=>({id,sh:ms,label:"פתיחה",role:"רוקח"})):[]),
                           ...(cs?getAssigned(date,cs.id,"רוקח").map(id=>({id,sh:cs,label:"סגירה",role:"רוקח"})):[]),
                           ...(ms?getAssigned(date,ms.id,"פרח").map(id=>({id,sh:ms,role:"פרח"})):[]),
                         ];
