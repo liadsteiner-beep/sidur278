@@ -962,12 +962,14 @@ export default function App() {
       ids.forEach(id => {
         const emp = employees.find(e => e.id === id);
         if (!emp) return;
+        const note = getEmpShiftNote(id, date, shift.id);
+        const isHarish = note.includes("חריש בעיר");
         emps.push({
           id, name: emp.name, role,
           time: getShiftTime(shift, role, getEmpShiftTime(id, date, shift.id)),
-          label: shift.id==="open"?"פתיחה":shift.id==="close"?"סגירה":"",
+          label: isHarish ? "" : shift.id==="open"?"פתיחה":shift.id==="close"?"סגירה":"",
           isMe: id === currentUser?.id,
-          note: getEmpShiftNote(id, date, shift.id),
+          note,
         });
       });
     });
@@ -1130,8 +1132,8 @@ export default function App() {
       const cs = ds.find(s=>s.id==="close");
       if (!ms && !cs) { html += `<td style="border:0.5px solid #e2e8f0;background:#f8fafc;text-align:center;color:#d1d5db;font-size:28px;vertical-align:middle;">—</td>`; return; }
       const emps = [
-        ...(ms ? getAssigned(dayObj,ms.id,"רוקח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:getShiftTime(ms,"רוקח",getEmpShiftTime(id,dayObj,ms.id)),label:ms.id==="open"?"פתיחה":"",note:getEmpShiftNote(id,dayObj,ms.id)})) : []),
-        ...(cs ? getAssigned(dayObj,cs.id,"רוקח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:getShiftTime(cs,"רוקח",getEmpShiftTime(id,dayObj,cs.id)),label:"סגירה",note:getEmpShiftNote(id,dayObj,cs.id)})) : []),
+        ...(ms ? getAssigned(dayObj,ms.id,"רוקח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:getShiftTime(ms,"רוקח",getEmpShiftTime(id,dayObj,ms.id)),label:ms.id==="open"&&!getEmpShiftNote(id,dayObj,ms.id).includes("חריש בעיר")?"פתיחה":"",note:getEmpShiftNote(id,dayObj,ms.id)})) : []),
+        ...(cs ? getAssigned(dayObj,cs.id,"רוקח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:getShiftTime(cs,"רוקח",getEmpShiftTime(id,dayObj,cs.id)),label:!getEmpShiftNote(id,dayObj,cs.id).includes("חריש בעיר")?"סגירה":"",note:getEmpShiftNote(id,dayObj,cs.id)})) : []),
         ...(ms ? getAssigned(dayObj,ms.id,"פרח").map(id=>({name:employees.find(e=>e.id===id)?.name||"?",time:getShiftTime(ms,"פרח",getEmpShiftTime(id,dayObj,ms.id)),note:getEmpShiftNote(id,dayObj,ms.id)})) : []),
       ];
       html += shiftCell(emps, ms ? getShiftNote(dayObj,ms.id) : "");
@@ -1659,9 +1661,8 @@ export default function App() {
                         const isPast=midnight<new Date();
                         if(!ms&&!cs) return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",background:isPast?"#edf0f4":"#f8fafc",textAlign:"center",color:"#d1d5db",fontSize:10}}>—</td>;
                         const allEmps=[
-                          ...(ms?getAssigned(date,ms.id,"רוקח").map(id=>({id,sh:ms,role:"רוקח"})):[]),
-                          ...(ms&&ms.id==="open"?getAssigned(date,ms.id,"רוקח").map(id=>({id,sh:ms,label:"פתיחה",role:"רוקח"})):[]),
-                          ...(cs?getAssigned(date,cs.id,"רוקח").map(id=>({id,sh:cs,label:"סגירה",role:"רוקח"})):[]),
+                          ...(ms?getAssigned(date,ms.id,"רוקח").map(id=>({id,sh:ms,label:ms.id==="open"&&!getEmpShiftNote(id,date,ms.id).includes("חריש בעיר")?"פתיחה":"",role:"רוקח"})):[]),
+                          ...(cs?getAssigned(date,cs.id,"רוקח").map(id=>({id,sh:cs,label:!getEmpShiftNote(id,date,cs.id).includes("חריש בעיר")?"סגירה":"",role:"רוקח"})):[]),
                           ...(ms?getAssigned(date,ms.id,"פרח").map(id=>({id,sh:ms,role:"פרח"})):[]),
                         ];
                         const shiftNote=ms?getShiftNote(date,ms.id):"";
@@ -1817,7 +1818,9 @@ export default function App() {
                 weekDates.forEach(date=>{
                   (DAY_SHIFTS[date.getDay()]||[]).forEach(sh=>{
                     if(getAssigned(date,sh.id,myRole).includes(currentUser.id)){
-                      const shiftLabel = ["morning","open"].includes(sh.id)?"בוקר":sh.id==="close"?"סגירה":"ערב";
+                      const empNote = getEmpShiftNote(currentUser.id,date,sh.id);
+                      const isHarish = empNote.includes("חריש בעיר");
+                      const shiftLabel = isHarish ? "בוקר" : ["morning","open"].includes(sh.id)?(sh.id==="open"?"פתיחה":"בוקר"):sh.id==="close"?"סגירה":"ערב";
                       const shiftIcon  = ["morning","open"].includes(sh.id)?"☀️":"🌙";
                       myShiftList.push({date,sh,shiftLabel,shiftIcon,isDuty:false,partner:null});
                     }
