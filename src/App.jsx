@@ -473,7 +473,7 @@ export default function App() {
         if (!hasOldNames) setEmployees(local.employees);
       }
       if (local.availability) setAvailability(local.availability);
-      if (local.assigned && false)     setAssigned(local.assigned); // תמיד טען מ-Firebase
+      if (local.assigned && Object.keys(local.assigned).length > 0) setAssigned(local.assigned);
       if (local.notes)        setNotes(local.notes);
       if (local.empNotes)     setEmpNotes(local.empNotes);
       if (local.empPasswords) setEmpPasswords(local.empPasswords);
