@@ -479,7 +479,7 @@ export default function App() {
         if (!hasOldNames) setEmployees(local.employees);
       }
       if (local.availability) setAvailability(local.availability);
-      if (local.assigned && Object.keys(local.assigned).length > 0) setAssigned(local.assigned);
+      // assigned נטען מ-useState lazy initializer מ-localStorage ישירות
       if (local.notes)        setNotes(local.notes);
       if (local.empNotes)     setEmpNotes(local.empNotes);
       if (local.empPasswords) setEmpPasswords(local.empPasswords);
@@ -556,23 +556,21 @@ export default function App() {
       // (הסינכרון ל-Firebase נעשה בכל שינוי דרך saveData)
       // שחזר publishedByWeek מגיבוי
       {
-        const RESTORE_KEY = "schedule_restored_v7";
+        const RESTORE_KEY = "schedule_restored_v8";
         const alreadyRestored = localStorage.getItem(RESTORE_KEY);
         if (!alreadyRestored) {
           const week14 = {"2026-06-14_morning_רוקח": [4], "2026-06-14_morning_פרח": [8], "2026-06-14_evening_רוקח": [1, 6], "2026-06-14_evening_פרח": [9], "2026-06-15_evening_פרח": [9], "2026-06-15_evening_רוקח": [4], "2026-06-15_morning_פרח": [10], "2026-06-15_morning_רוקח": [1], "2026-06-16_evening_פרח": [10], "2026-06-16_evening_רוקח": [2, 6], "2026-06-16_morning_פרח": [8], "2026-06-16_morning_רוקח": [3], "2026-06-17_evening_פרח": [8, 10], "2026-06-17_evening_רוקח": [3], "2026-06-17_morning_פרח": [11], "2026-06-17_morning_רוקח": [1], "2026-06-18_close_רוקח": [2], "2026-06-18_open_פרח": [12], "2026-06-18_open_רוקח": [1, 6], "2026-06-19_evening_פרח": [12], "2026-06-19_evening_רוקח": [1], "2026-06-19_morning_רוקח": [2]};
           const week7  = {"2026-06-07_morning_רוקח": [1, 7], "2026-06-07_evening_רוקח": [2], "2026-06-07_evening_פרח": [9], "2026-06-08_morning_רוקח": [6], "2026-06-08_morning_פרח": [9], "2026-06-08_evening_רוקח": [1], "2026-06-08_evening_פרח": [102], "2026-06-09_morning_רוקח": [2], "2026-06-09_morning_פרח": [101], "2026-06-09_evening_רוקח": [1, 6], "2026-06-09_evening_פרח": [9], "2026-06-10_morning_רוקח": [1], "2026-06-10_morning_פרח": [101], "2026-06-10_evening_רוקח": [4], "2026-06-10_evening_פרח": [8], "2026-06-11_morning_רוקח": [4], "2026-06-11_morning_פרח": [9], "2026-06-11_evening_רוקח": [2, 6], "2026-06-11_evening_פרח": [8], "2026-06-12_open_רוקח": [4, 1], "2026-06-12_close_רוקח": [6], "2026-06-12_open_פרח": [11], "2026-06-13_morning_רוקח": [2], "2026-06-13_evening_רוקח": [4, 6], "2026-06-13_evening_פרח": [9]};
           const pbw = d.publishedByWeek || {};
-          setAssigned(week14);
           setPublishedWeekStart("2026-06-14");
           setPublished(true);
           const updatedPbw = {
             ...pbw,
             "2026-06-07": Object.keys(pbw["2026-06-07"]||{}).length > 0 ? pbw["2026-06-07"] : week7,
-            "2026-06-14": week14,
+            "2026-06-14": Object.keys(pbw["2026-06-14"]||{}).length > 0 ? pbw["2026-06-14"] : week14,
           };
           setPublishedByWeek(updatedPbw);
           setDoc(doc(db,"pharmacy","schedule"),{
-            assigned: week14,
             publishedWeekStart: "2026-06-14",
             published: true,
             publishedByWeek: updatedPbw
