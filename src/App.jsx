@@ -16,7 +16,12 @@ const db = getFirestore(firebaseApp);
 async function fbSave(data) {
   try {
     if (typeof window !== "undefined" && window._setSaveTime) window._setSaveTime();
-    await setDoc(doc(db, "pharmacy", "schedule"), data, { merge: true });
+    // אל תדרוס assigned ריק ל-Firebase — מגן על סידורים קיימים
+    const safeData = {...data};
+    if (safeData.assigned && Object.keys(safeData.assigned).length === 0) {
+      delete safeData.assigned;
+    }
+    await setDoc(doc(db, "pharmacy", "schedule"), safeData, { merge: true });
   } catch(e) { console.error("Firebase save error:", e); }
 }
 
@@ -2586,8 +2591,8 @@ export default function App() {
           <div>
             <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
               <button style={S.btn("#7e22ce")} onClick={()=>setShowAutoConfirm(true)}>⚡ שיבוץ אוטומטי</button>
-              <button style={S.btn("#f59e0b")} onClick={()=>{if(window.confirm("לאפס שיבוצים בלבד (ללא זמינויות)?")) {setAssigned({});setPublished(false);setPublishedWeekStart("");setDoc(doc(db,"pharmacy","schedule"),{assigned:{},published:false,publishedWeekStart:""},{merge:true});showToast("שיבוצים אופסו ✓");}}}>🗑️ אפס שיבוצים</button>
-              <button style={S.btnOut("#ef4444")} onClick={()=>{if(window.confirm("לאפס את כל השיבוצים?")) {setAssigned({});setPublished(false);setPublishedWeekStart("");setDoc(doc(db,"pharmacy","schedule"),{assigned:{},published:false,publishedWeekStart:""},{merge:true});}}}>🗑️ אפס הכל</button>
+              <button style={S.btn("#f59e0b")} onClick={()=>{if(window.confirm("לאפס שיבוצים בלבד (ללא זמינויות)?")) {setAssigned({});showToast("שיבוצים אופסו ✓");}}}>🗑️ אפס שיבוצים</button>
+              <button style={S.btnOut("#ef4444")} onClick={()=>{if(window.confirm("לאפס את כל השיבוצים?")) {setAssigned({});setPublished(false);}}}>🗑️ אפס הכל</button>
               <span style={{fontSize:12,color:"#64748b"}}>לחיצה ארוכה על שם → עריכת שעות</span>
             </div>
 
