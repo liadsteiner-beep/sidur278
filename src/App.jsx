@@ -361,7 +361,13 @@ export default function App() {
   const [showManagerLogin, setShowManagerLogin] = useState(false);
   const [employees, setEmployees]     = useState(INITIAL_EMPLOYEES);
   const [availability, setAvailability] = useState({});
-  const [assigned, setAssigned]       = useState({});
+  const [assigned, setAssigned]       = useState(() => {
+    try {
+      const local = loadLocalData();
+      if (local?.assigned && Object.keys(local.assigned).length > 0) return local.assigned;
+    } catch {}
+    return {};
+  });
   const [notes, setNotes]             = useState({});
   const [empNotes, setEmpNotes]       = useState({});
   const [empPasswords, setEmpPasswords] = useState({});
