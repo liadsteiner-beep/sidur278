@@ -548,9 +548,10 @@ export default function App() {
       }
       if (d.assigned && Object.keys(d.assigned).length > 0) {
         setAssigned(d.assigned);
-      } else {
-        // שחזר סידורים מגיבוי
-        const RESTORE_KEY = "schedule_restored_v2";
+      }
+      // תמיד שחזר סידורים מגיבוי בטעינה ראשונה
+      {
+        const RESTORE_KEY = "schedule_restored_v3";
         const alreadyRestored = localStorage.getItem(RESTORE_KEY);
         if (!alreadyRestored) {
           const week14 = {"2026-06-14_evening_\u05e4\u05e8\u05d7": [12], "2026-06-14_evening_\u05e8\u05d5\u05e7\u05d7": [2], "2026-06-14_morning_\u05e4\u05e8\u05d7": [9], "2026-06-14_morning_\u05e8\u05d5\u05e7\u05d7": [6], "2026-06-15_evening_\u05e4\u05e8\u05d7": [9], "2026-06-15_evening_\u05e8\u05d5\u05e7\u05d7": [4], "2026-06-15_morning_\u05e4\u05e8\u05d7": [10], "2026-06-15_morning_\u05e8\u05d5\u05e7\u05d7": [1], "2026-06-16_evening_\u05e4\u05e8\u05d7": [10], "2026-06-16_evening_\u05e8\u05d5\u05e7\u05d7": [2, 6], "2026-06-16_morning_\u05e4\u05e8\u05d7": [8], "2026-06-16_morning_\u05e8\u05d5\u05e7\u05d7": [3], "2026-06-17_evening_\u05e4\u05e8\u05d7": [8, 10], "2026-06-17_evening_\u05e8\u05d5\u05e7\u05d7": [3], "2026-06-17_morning_\u05e4\u05e8\u05d7": [11], "2026-06-17_morning_\u05e8\u05d5\u05e7\u05d7": [1], "2026-06-18_close_\u05e8\u05d5\u05e7\u05d7": [2], "2026-06-18_open_\u05e4\u05e8\u05d7": [12], "2026-06-18_open_\u05e8\u05d5\u05e7\u05d7": [1, 6], "2026-06-19_evening_\u05e4\u05e8\u05d7": [12], "2026-06-19_evening_\u05e8\u05d5\u05e7\u05d7": [1], "2026-06-19_morning_\u05e8\u05d5\u05e7\u05d7": [2]};
