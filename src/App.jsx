@@ -947,14 +947,12 @@ export default function App() {
   }
 
   const aKey      = (date,shiftId,role) => `${dateKey(date)}_${shiftId}_${role}`;
-  // השתמש ב-publishedByWeek רק לצפייה בסידורים ישנים
-  // לצורך שיבוץ — תמיד השתמש ב-assigned הנוכחי
   const viewWeekKey = dateKey(weekDates[0]);
-  const isViewingPublishedWeek = !!(publishedByWeek[viewWeekKey] && Object.keys(publishedByWeek[viewWeekKey]).length > 0);
-  const assignedForView = (isViewingPublishedWeek && managerTab !== "assign") 
-    ? publishedByWeek[viewWeekKey] 
-    : assigned;
-  const getAssigned = (date,shiftId,role) => assignedForView[aKey(date,shiftId,role)]||[];
+  const publishedWeekKey = publishedWeekStart || "";
+  
+  // getAssigned — תמיד מ-assigned הנוכחי
+  // publishedByWeek משמש רק לצפייה בסידורים ישנים בלשונית סימולציה
+  const getAssigned = (date,shiftId,role) => assigned[aKey(date,shiftId,role)]||[];
 
   const empDisplayDates = showNextWeek && nextWeekPublished ? nextWeekDates : weekDates;
 
@@ -1031,6 +1029,7 @@ export default function App() {
     setAutoAssignSeed(newSeed);
     const result = autoAssign(employees, availability, fridayRota, {}, weekDates, weekBudget, newSeed);
     setAssigned(result);
+    setPublishedWeekStart(viewWeekKey); // עדכן שה-assigned שייך לשבוע זה
     setShowAutoConfirm(false);
     showToast("שיבוץ אוטומטי הושלם ✓");
   }
@@ -2587,8 +2586,8 @@ export default function App() {
           <div>
             <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
               <button style={S.btn("#7e22ce")} onClick={()=>setShowAutoConfirm(true)}>⚡ שיבוץ אוטומטי</button>
-              <button style={S.btn("#f59e0b")} onClick={()=>{if(window.confirm("לאפס שיבוצים בלבד (ללא זמינויות)?")) {setAssigned({});showToast("שיבוצים אופסו ✓");}}}>🗑️ אפס שיבוצים</button>
-              <button style={S.btnOut("#ef4444")} onClick={()=>{if(window.confirm("לאפס את כל השיבוצים?")) setAssigned({});}}>🗑️ אפס הכל</button>
+              <button style={S.btn("#f59e0b")} onClick={()=>{if(window.confirm("לאפס שיבוצים בלבד (ללא זמינויות)?")) {setAssigned({});setPublished(false);setPublishedWeekStart("");setDoc(doc(db,"pharmacy","schedule"),{assigned:{},published:false,publishedWeekStart:""},{merge:true});showToast("שיבוצים אופסו ✓");}}}>🗑️ אפס שיבוצים</button>
+              <button style={S.btnOut("#ef4444")} onClick={()=>{if(window.confirm("לאפס את כל השיבוצים?")) {setAssigned({});setPublished(false);setPublishedWeekStart("");setDoc(doc(db,"pharmacy","schedule"),{assigned:{},published:false,publishedWeekStart:""},{merge:true});}}}>🗑️ אפס הכל</button>
               <span style={{fontSize:12,color:"#64748b"}}>לחיצה ארוכה על שם → עריכת שעות</span>
             </div>
 
