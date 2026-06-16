@@ -714,7 +714,12 @@ export default function App() {
   useEffect(() => {
     if (!fbLoaded) return;
     // שמור הכל חוץ מ-availability — זמינות נשמרת רק על ידי העובדים עצמם
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ employees, availability, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, publishedWeekStart, publishedAssigned, publishedByWeek, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAvail, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep })); } catch {}
+    // אל תדרוס assigned ב-localStorage אם state ריק (טרם נטען)
+    const currentLocal = loadLocalData();
+    const localAssignedKeys = Object.keys(currentLocal?.assigned || {}).length;
+    const stateAssignedKeys = Object.keys(assigned).length;
+    const saveAssigned = stateAssignedKeys > 0 ? assigned : (currentLocal?.assigned || {});
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ employees, availability, assigned: saveAssigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, publishedWeekStart, publishedAssigned, publishedByWeek, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAvail, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep })); } catch {}
     // אל תשמור assigned ריק ל-Firebase — עלול לדרוס שיבוצים קיימים
     const saveObj = { employees, notes, empNotes, empPasswords, managerPassword, fridayRota, published, publishedWeekStart, publishedAssigned, publishedByWeek, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep };
     if (Object.keys(assigned).length > 0) saveObj.assigned = assigned;
