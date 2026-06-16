@@ -546,7 +546,17 @@ export default function App() {
         // כל עדכון מ-Firebase — עדכן זמינויות מיידית
         if (d.availability) setAvailability(d.availability);
       }
-      if (d.assigned)     setAssigned(d.assigned);
+      if (d.assigned && Object.keys(d.assigned).length > 0) {
+        setAssigned(d.assigned);
+      } else if (d.publishedByWeek && d.publishedWeekStart) {
+        // assigned ריק — שחזר מ-publishedByWeek
+        const savedWeek = d.publishedByWeek[d.publishedWeekStart];
+        if (savedWeek && Object.keys(savedWeek).length > 0) {
+          setAssigned(savedWeek);
+          // שמור חזרה ל-assigned ב-Firebase
+          setDoc(doc(db, "pharmacy", "schedule"), { assigned: savedWeek }, { merge: true }).catch(console.error);
+        }
+      }
       if (d.notes)        setNotes(d.notes);
       if (d.empNotes)     setEmpNotes(d.empNotes);
       if (d.empPasswords) setEmpPasswords(d.empPasswords);
