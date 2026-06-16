@@ -571,7 +571,14 @@ export default function App() {
           },{merge:true}).catch(console.error);
           try { localStorage.setItem(RESTORE_KEY, "1"); } catch {}
         } else if (d.assigned && Object.keys(d.assigned).length > 0) {
-          setAssigned(d.assigned);
+          // מיזג Firebase עם localStorage — local מנצח
+          const localAssigned = loadLocalData()?.assigned || {};
+          const merged = { ...d.assigned, ...localAssigned };
+          setAssigned(merged);
+          // שמור ל-Firebase אם local יש יותר נתונים
+          if (Object.keys(localAssigned).length > Object.keys(d.assigned).length) {
+            setDoc(doc(db,"pharmacy","schedule"),{assigned:merged},{merge:true}).catch(console.error);
+          }
         }
       }
       if (d.notes)        setNotes(d.notes);
