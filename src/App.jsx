@@ -225,11 +225,12 @@ function autoAssign(employees, availability, fridayRota, assigned, weekDates, we
           return true;
         })
         .filter(emp => {
-          // אם כבר יש לו בוקר ומקסימום ≤ 2 — לא לתת עוד בוקר
           const budget = getBudget(emp);
           const c = countShifts(emp.id);
-          if (isMorning && budget.max <= 2 && c.morning >= 1) return false;
-          if (!isMorning && budget.max <= 2 && c.evening >= 1) return false;
+          // הגבל לפי max בלבד — לא לפי max<=2
+          // אבל אם כבר יש יותר בקרים מערבים ביותר מ-1 — תן עדיפות לערב ולהיפך
+          if (isMorning && c.morning > c.evening + 1) return false;
+          if (!isMorning && c.evening > c.morning + 1) return false;
           return true;
         })
         .sort((a, b) => {
@@ -925,9 +926,13 @@ export default function App() {
   }
 
   const aKey      = (date,shiftId,role) => `${dateKey(date)}_${shiftId}_${role}`;
-  // השתמש ב-publishedByWeek לפי השבוע המוצג — כך סידורים ישנים לא יידרסו
+  // השתמש ב-publishedByWeek רק לצפייה בסידורים ישנים
+  // לצורך שיבוץ — תמיד השתמש ב-assigned הנוכחי
   const viewWeekKey = dateKey(weekDates[0]);
-  const assignedForView = publishedByWeek[viewWeekKey] || assigned;
+  const isViewingPublishedWeek = !!(publishedByWeek[viewWeekKey] && Object.keys(publishedByWeek[viewWeekKey]).length > 0);
+  const assignedForView = (isViewingPublishedWeek && managerTab !== "assign") 
+    ? publishedByWeek[viewWeekKey] 
+    : assigned;
   const getAssigned = (date,shiftId,role) => assignedForView[aKey(date,shiftId,role)]||[];
 
   const empDisplayDates = showNextWeek && nextWeekPublished ? nextWeekDates : weekDates;
