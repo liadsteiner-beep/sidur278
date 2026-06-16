@@ -546,21 +546,8 @@ export default function App() {
         // כל עדכון מ-Firebase — עדכן זמינויות מיידית
         if (d.availability) setAvailability(d.availability);
       }
-      // טען assigned — מיזג Firebase + localStorage, שמור ל-Firebase אם חסר
-      {
-        const localData = loadLocalData();
-        const localAssigned = (localData?.assigned && Object.keys(localData.assigned).length > 0) ? localData.assigned : {};
-        const firebaseAssigned = (d.assigned && Object.keys(d.assigned).length > 0) ? d.assigned : {};
-        const merged = { ...firebaseAssigned, ...localAssigned };
-        if (Object.keys(merged).length > 0) {
-          setAssigned(merged);
-          // אם local מוסיף מפתחות שחסרים ב-Firebase — עדכן Firebase
-          const missingInFirebase = Object.keys(localAssigned).some(k => !firebaseAssigned[k]);
-          if (missingInFirebase) {
-            setDoc(doc(db,"pharmacy","schedule"),{assigned:merged},{merge:true}).catch(console.error);
-          }
-        }
-      }
+      // assigned נטען מ-localStorage בלבד — Firebase לא ידרוס
+      // (הסינכרון ל-Firebase נעשה בכל שינוי דרך saveData)
       // שחזר publishedByWeek מגיבוי
       {
         const RESTORE_KEY = "schedule_restored_v5";
