@@ -548,13 +548,30 @@ export default function App() {
       }
       if (d.assigned && Object.keys(d.assigned).length > 0) {
         setAssigned(d.assigned);
-      } else if (d.publishedByWeek && d.publishedWeekStart) {
-        // assigned ריק — שחזר מ-publishedByWeek
-        const savedWeek = d.publishedByWeek[d.publishedWeekStart];
-        if (savedWeek && Object.keys(savedWeek).length > 0) {
-          setAssigned(savedWeek);
-          // שמור חזרה ל-assigned ב-Firebase
-          setDoc(doc(db, "pharmacy", "schedule"), { assigned: savedWeek }, { merge: true }).catch(console.error);
+      } else {
+        // שחזר סידורים מגיבוי
+        const RESTORE_KEY = "schedule_restored_v1";
+        const alreadyRestored = localStorage.getItem(RESTORE_KEY);
+        if (!alreadyRestored) {
+          const week14 = {"2026-06-14_evening_\u05e4\u05e8\u05d7": [12], "2026-06-14_evening_\u05e8\u05d5\u05e7\u05d7": [2], "2026-06-14_morning_\u05e4\u05e8\u05d7": [9], "2026-06-14_morning_\u05e8\u05d5\u05e7\u05d7": [6], "2026-06-15_evening_\u05e4\u05e8\u05d7": [9], "2026-06-15_evening_\u05e8\u05d5\u05e7\u05d7": [4], "2026-06-15_morning_\u05e4\u05e8\u05d7": [10], "2026-06-15_morning_\u05e8\u05d5\u05e7\u05d7": [1], "2026-06-16_evening_\u05e4\u05e8\u05d7": [10], "2026-06-16_evening_\u05e8\u05d5\u05e7\u05d7": [2, 6], "2026-06-16_morning_\u05e4\u05e8\u05d7": [8], "2026-06-16_morning_\u05e8\u05d5\u05e7\u05d7": [3], "2026-06-17_evening_\u05e4\u05e8\u05d7": [8, 10], "2026-06-17_evening_\u05e8\u05d5\u05e7\u05d7": [3], "2026-06-17_morning_\u05e4\u05e8\u05d7": [11], "2026-06-17_morning_\u05e8\u05d5\u05e7\u05d7": [1], "2026-06-18_close_\u05e8\u05d5\u05e7\u05d7": [2], "2026-06-18_open_\u05e4\u05e8\u05d7": [12], "2026-06-18_open_\u05e8\u05d5\u05e7\u05d7": [1, 6], "2026-06-19_evening_\u05e4\u05e8\u05d7": [12], "2026-06-19_evening_\u05e8\u05d5\u05e7\u05d7": [1], "2026-06-19_morning_\u05e8\u05d5\u05e7\u05d7": [2]};
+          const week7  = {"2026-06-06_evening_\u05e4\u05e8\u05d7": [9], "2026-06-06_evening_\u05e8\u05d5\u05e7\u05d7": [2], "2026-06-06_morning_\u05e8\u05d5\u05e7\u05d7": [1, 7], "2026-06-07_evening_\u05e4\u05e8\u05d7": [1781123004904], "2026-06-07_evening_\u05e8\u05d5\u05e7\u05d7": [2, 1], "2026-06-07_morning_\u05e4\u05e8\u05d7": [9], "2026-06-07_morning_\u05e8\u05d5\u05e7\u05d7": [6], "2026-06-08_evening_\u05e4\u05e8\u05d7": [9], "2026-06-08_evening_\u05e8\u05d5\u05e7\u05d7": [1, 6], "2026-06-08_morning_\u05e4\u05e8\u05d7": [1781123012396], "2026-06-08_morning_\u05e8\u05d5\u05e7\u05d7": [2], "2026-06-09_evening_\u05e4\u05e8\u05d7": [8], "2026-06-09_evening_\u05e8\u05d5\u05e7\u05d7": [4], "2026-06-09_morning_\u05e4\u05e8\u05d7": [1781123012396], "2026-06-09_morning_\u05e8\u05d5\u05e7\u05d7": [1], "2026-06-10_evening_\u05e4\u05e8\u05d7": [9], "2026-06-10_evening_\u05e8\u05d5\u05e7\u05d7": [2, 6], "2026-06-10_morning_\u05e4\u05e8\u05d7": [8], "2026-06-10_morning_\u05e8\u05d5\u05e7\u05d7": [4], "2026-06-11_close_\u05e8\u05d5\u05e7\u05d7": [6], "2026-06-11_evening_\u05e8\u05d5\u05e7\u05d7": [2, 6], "2026-06-11_morning_\u05e4\u05e8\u05d7": [8], "2026-06-11_morning_\u05e8\u05d5\u05e7\u05d7": [4], "2026-06-11_open_\u05e4\u05e8\u05d7": [11], "2026-06-11_open_\u05e8\u05d5\u05e7\u05d7": [4, 1], "2026-06-12_close_\u05e8\u05d5\u05e7\u05d7": [1, 6], "2026-06-12_evening_\u05e4\u05e8\u05d7": [9], "2026-06-12_evening_\u05e8\u05d5\u05e7\u05d7": [4, 6], "2026-06-12_morning_\u05e8\u05d5\u05e7\u05d7": [2], "2026-06-12_open_\u05e4\u05e8\u05d7": [11], "2026-06-12_open_\u05e8\u05d5\u05e7\u05d7": [4], "2026-06-13_evening_\u05e4\u05e8\u05d7": [9], "2026-06-13_evening_\u05e8\u05d5\u05e7\u05d7": [1, 6], "2026-06-13_morning_\u05e4\u05e8\u05d7": [8], "2026-06-13_morning_\u05e8\u05d5\u05e7\u05d7": [4]};
+          const pbw = d.publishedByWeek || {};
+          const updatedPbw = {
+            ...pbw,
+            "2026-06-07": Object.keys(pbw["2026-06-07"]||{}).length > 0 ? pbw["2026-06-07"] : week7,
+            "2026-06-14": Object.keys(pbw["2026-06-14"]||{}).length > 0 ? pbw["2026-06-14"] : week14,
+          };
+          setAssigned(week14);
+          setPublishedWeekStart("2026-06-14");
+          setPublished(true);
+          setPublishedByWeek(updatedPbw);
+          setDoc(doc(db,"pharmacy","schedule"),{
+            assigned: week14,
+            publishedWeekStart: "2026-06-14",
+            published: true,
+            publishedByWeek: updatedPbw
+          },{merge:true}).catch(console.error);
+          try { localStorage.setItem(RESTORE_KEY, "1"); } catch {}
         }
       }
       if (d.notes)        setNotes(d.notes);
