@@ -546,13 +546,28 @@ export default function App() {
         // כל עדכון מ-Firebase — עדכן זמינויות מיידית
         if (d.availability) setAvailability(d.availability);
       }
-      // שחזר סידורים מגיבוי — תמיד קודם לכל
+      // טען assigned — מיזג Firebase + localStorage, שמור ל-Firebase אם חסר
       {
-        const RESTORE_KEY = "schedule_restored_v4";
+        const localData = loadLocalData();
+        const localAssigned = (localData?.assigned && Object.keys(localData.assigned).length > 0) ? localData.assigned : {};
+        const firebaseAssigned = (d.assigned && Object.keys(d.assigned).length > 0) ? d.assigned : {};
+        const merged = { ...firebaseAssigned, ...localAssigned };
+        if (Object.keys(merged).length > 0) {
+          setAssigned(merged);
+          // אם local מוסיף מפתחות שחסרים ב-Firebase — עדכן Firebase
+          const missingInFirebase = Object.keys(localAssigned).some(k => !firebaseAssigned[k]);
+          if (missingInFirebase) {
+            setDoc(doc(db,"pharmacy","schedule"),{assigned:merged},{merge:true}).catch(console.error);
+          }
+        }
+      }
+      // שחזר publishedByWeek מגיבוי
+      {
+        const RESTORE_KEY = "schedule_restored_v5";
         const alreadyRestored = localStorage.getItem(RESTORE_KEY);
         if (!alreadyRestored) {
           const week14 = {"2026-06-14_evening_\u05e4\u05e8\u05d7": [12], "2026-06-14_evening_\u05e8\u05d5\u05e7\u05d7": [2], "2026-06-14_morning_\u05e4\u05e8\u05d7": [9], "2026-06-14_morning_\u05e8\u05d5\u05e7\u05d7": [6], "2026-06-15_evening_\u05e4\u05e8\u05d7": [9], "2026-06-15_evening_\u05e8\u05d5\u05e7\u05d7": [4], "2026-06-15_morning_\u05e4\u05e8\u05d7": [10], "2026-06-15_morning_\u05e8\u05d5\u05e7\u05d7": [1], "2026-06-16_evening_\u05e4\u05e8\u05d7": [10], "2026-06-16_evening_\u05e8\u05d5\u05e7\u05d7": [2, 6], "2026-06-16_morning_\u05e4\u05e8\u05d7": [8], "2026-06-16_morning_\u05e8\u05d5\u05e7\u05d7": [3], "2026-06-17_evening_\u05e4\u05e8\u05d7": [8, 10], "2026-06-17_evening_\u05e8\u05d5\u05e7\u05d7": [3], "2026-06-17_morning_\u05e4\u05e8\u05d7": [11], "2026-06-17_morning_\u05e8\u05d5\u05e7\u05d7": [1], "2026-06-18_close_\u05e8\u05d5\u05e7\u05d7": [2], "2026-06-18_open_\u05e4\u05e8\u05d7": [12], "2026-06-18_open_\u05e8\u05d5\u05e7\u05d7": [1, 6], "2026-06-19_evening_\u05e4\u05e8\u05d7": [12], "2026-06-19_evening_\u05e8\u05d5\u05e7\u05d7": [1], "2026-06-19_morning_\u05e8\u05d5\u05e7\u05d7": [2]};
-          const week7  = {"2026-06-06_evening_\u05e4\u05e8\u05d7": [9], "2026-06-06_evening_\u05e8\u05d5\u05e7\u05d7": [2], "2026-06-06_morning_\u05e8\u05d5\u05e7\u05d7": [1, 7], "2026-06-07_evening_\u05e4\u05e8\u05d7": [1781123004904], "2026-06-07_evening_\u05e8\u05d5\u05e7\u05d7": [2, 1], "2026-06-07_morning_\u05e4\u05e8\u05d7": [9], "2026-06-07_morning_\u05e8\u05d5\u05e7\u05d7": [6], "2026-06-08_evening_\u05e4\u05e8\u05d7": [9], "2026-06-08_evening_\u05e8\u05d5\u05e7\u05d7": [1, 6], "2026-06-08_morning_\u05e4\u05e8\u05d7": [1781123012396], "2026-06-08_morning_\u05e8\u05d5\u05e7\u05d7": [2], "2026-06-09_evening_\u05e4\u05e8\u05d7": [8], "2026-06-09_evening_\u05e8\u05d5\u05e7\u05d7": [4], "2026-06-09_morning_\u05e4\u05e8\u05d7": [1781123012396], "2026-06-09_morning_\u05e8\u05d5\u05e7\u05d7": [1], "2026-06-10_evening_\u05e4\u05e8\u05d7": [9], "2026-06-10_evening_\u05e8\u05d5\u05e7\u05d7": [2, 6], "2026-06-10_morning_\u05e4\u05e8\u05d7": [8], "2026-06-10_morning_\u05e8\u05d5\u05e7\u05d7": [4], "2026-06-11_close_\u05e8\u05d5\u05e7\u05d7": [6], "2026-06-11_evening_\u05e8\u05d5\u05e7\u05d7": [2, 6], "2026-06-11_morning_\u05e4\u05e8\u05d7": [8], "2026-06-11_morning_\u05e8\u05d5\u05e7\u05d7": [4], "2026-06-11_open_\u05e4\u05e8\u05d7": [11], "2026-06-11_open_\u05e8\u05d5\u05e7\u05d7": [4, 1], "2026-06-12_close_\u05e8\u05d5\u05e7\u05d7": [1, 6], "2026-06-12_evening_\u05e4\u05e8\u05d7": [9], "2026-06-12_evening_\u05e8\u05d5\u05e7\u05d7": [4, 6], "2026-06-12_morning_\u05e8\u05d5\u05e7\u05d7": [2], "2026-06-12_open_\u05e4\u05e8\u05d7": [11], "2026-06-12_open_\u05e8\u05d5\u05e7\u05d7": [4], "2026-06-13_evening_\u05e4\u05e8\u05d7": [9], "2026-06-13_evening_\u05e8\u05d5\u05e7\u05d7": [1, 6], "2026-06-13_morning_\u05e4\u05e8\u05d7": [8], "2026-06-13_morning_\u05e8\u05d5\u05e7\u05d7": [4]};
+          const week7  = {"2026-06-07_evening_פרח": [9], "2026-06-07_evening_רוקח": [2], "2026-06-07_morning_פרח": [7], "2026-06-07_morning_רוקח": [1], "2026-06-08_evening_פרח": [102], "2026-06-08_evening_רוקח": [1], "2026-06-08_morning_פרח": [9], "2026-06-08_morning_רוקח": [6], "2026-06-09_evening_פרח": [9], "2026-06-09_evening_רוקח": [1, 6], "2026-06-09_morning_פרח": [101], "2026-06-09_morning_רוקח": [2], "2026-06-10_evening_פרח": [8], "2026-06-10_evening_רוקח": [4], "2026-06-10_morning_פרח": [101], "2026-06-10_morning_רוקח": [1], "2026-06-11_evening_רוקח": [2, 6], "2026-06-11_morning_פרח": [8], "2026-06-11_morning_רוקח": [4], "2026-06-12_close_רוקח": [1, 6], "2026-06-12_open_פרח": [11], "2026-06-12_open_רוקח": [4], "2026-06-13_evening_פרח": [9], "2026-06-13_evening_רוקח": [4, 6], "2026-06-13_morning_רוקח": [2]};
           const pbw = d.publishedByWeek || {};
           const updatedPbw = {
             ...pbw,
@@ -570,15 +585,8 @@ export default function App() {
             publishedByWeek: updatedPbw
           },{merge:true}).catch(console.error);
           try { localStorage.setItem(RESTORE_KEY, "1"); } catch {}
-        } else if (d.assigned && Object.keys(d.assigned).length > 0) {
-          // מיזג Firebase עם localStorage — local מנצח
-          const localAssigned = loadLocalData()?.assigned || {};
-          const merged = { ...d.assigned, ...localAssigned };
-          setAssigned(merged);
-          // שמור ל-Firebase אם local יש יותר נתונים
-          if (Object.keys(localAssigned).length > Object.keys(d.assigned).length) {
-            setDoc(doc(db,"pharmacy","schedule"),{assigned:merged},{merge:true}).catch(console.error);
-          }
+        } else {
+          // publishedByWeek בלבד — assigned כבר טופל למעלה
         }
       }
       if (d.notes)        setNotes(d.notes);
