@@ -201,18 +201,25 @@ function autoAssign(employees, availability, fridayRota, assigned, weekDates, we
 
   const pharmacists = employees.filter(e => e.role === "רוקח" && e.name !== "עדי");
 
-  weekDates.forEach(date => {
-    const dow = date.getDay();
-    const dayShifts = DAY_SHIFTS[dow] || [];
-    dayShifts.forEach(shift => {
-      if (dow === 5) return;
+  // עובר 2 פעמים — פעם לבוקרים ופעם לערבים — כדי לאזן בין עובדים
+  ["morning","evening"].forEach(shiftType => {
+    weekDates.forEach(date => {
+      const dow = date.getDay();
+      if (dow === 5) return; // שישי מטופל בנפרד
+      const dayShifts = DAY_SHIFTS[dow] || [];
+      const shift = dayShifts.find(s => {
+        if (shiftType === "morning") return s.id === "morning" || s.id === "open";
+        return s.id === "evening" || s.id === "close";
+      });
+      if (!shift) return;
       const needed = shift.slots["רוקח"] || 0;
       if (!needed) return;
       const current = getA(date, shift.id, "רוקח");
       if (current.length >= needed) return;
 
-      const isMorning = shift.id === "morning" || shift.id === "open";
-      const candidates = pharmacists
+      const isMorning = shiftType === "morning";
+
+      const getCandidates = (allowRelax) => pharmacists
         .filter(emp => {
           if (current.includes(emp.id)) return false;
           if (!isAv(emp.id, date, shift.id)) return false;
@@ -220,17 +227,15 @@ function autoAssign(employees, availability, fridayRota, assigned, weekDates, we
           if (isMorning && hadEveningYesterday(emp.id, date)) return false;
           const budget = getBudget(emp);
           if (budget.max === 0) return false;
-          const { total } = countShifts(emp.id);
+          const { total, morning, evening } = countShifts(emp.id);
           if (total >= budget.max) return false;
-          return true;
-        })
-        .filter(emp => {
-          const budget = getBudget(emp);
-          const c = countShifts(emp.id);
-          // הגבל לפי max בלבד — לא לפי max<=2
-          // אבל אם כבר יש יותר בקרים מערבים ביותר מ-1 — תן עדיפות לערב ולהיפך
-          if (isMorning && c.morning > c.evening + 1) return false;
-          if (!isMorning && c.evening > c.morning + 1) return false;
+          // איזון בוקר/ערב — relaxed אם אין מספיק מועמדים
+          if (!allowRelax) {
+            const totalShiftsLeft = weekDates.length - date.getDay(); // ימים שנשארו
+            if (isMorning && morning >= Math.ceil((total + totalShiftsLeft) / 2)) return false;
+            if (isMorning && morning > evening) return false;
+            if (!isMorning && evening > morning) return false;
+          }
           return true;
         })
         .sort((a, b) => {
@@ -238,41 +243,56 @@ function autoAssign(employees, availability, fridayRota, assigned, weekDates, we
           const bB = getBudget(b);
           const cA = countShifts(a.id);
           const cB = countShifts(b.id);
+          // עדיפות: מי שיש לו פחות מהסוג הזה
           const ratioA = isMorning ? cA.morning - cA.evening : cA.evening - cA.morning;
           const ratioB = isMorning ? cB.morning - cB.evening : cB.evening - cB.morning;
           if (ratioA !== ratioB) return ratioA - ratioB;
+          // עדיפות: מי שצריך עוד משמרות לפי מינימום
           const needA = (bA.min||0) - cA.total;
           const needB = (bB.min||0) - cB.total;
           if (needB !== needA) return needB - needA;
-          return cA.total - cB.total;
+          // עדיפות: מי שיש לו פחות סך הכל
+          if (cA.total !== cB.total) return cA.total - cB.total;
+          // seed לגיוון
+          return (shuffleSeed||0) % 2 === 0 ? a.id - b.id : b.id - a.id;
         });
 
+      let candidates = getCandidates(false);
+      if (candidates.length === 0) candidates = getCandidates(true); // נסה בלי הגבלת איזון
+
       if (candidates.length > 0) {
-        if (candidates.length > 0) {
-          const pick = (shuffleSeed && candidates.length > 1)
-            ? candidates[shuffleSeed % Math.min(candidates.length, 3)]
-            : candidates[0];
-          setA(date, shift.id, "רוקח", [...current, (pick||candidates[0]).id]);
-        }
+        setA(date, shift.id, "רוקח", [...current, candidates[0].id]);
       }
     });
   });
 
   const parchs = employees.filter(e => e.role === "פרח");
-  weekDates.forEach(date => {
-    const dow = date.getDay();
-    const dayShifts = DAY_SHIFTS[dow] || [];
-    dayShifts.forEach(shift => {
+  // פרחים — 2 מעברים לאיזון בוקר/ערב
+  ["morning","evening"].forEach(shiftType => {
+    weekDates.forEach(date => {
+      const dow = date.getDay();
+      const dayShifts = DAY_SHIFTS[dow] || [];
+      const shift = dayShifts.find(s => {
+        if (shiftType === "morning") return s.id === "morning" || s.id === "open";
+        return s.id === "evening";
+      });
+      if (!shift) return;
       const needed = shift.slots["פרח"] || 0;
       if (!needed) return;
       const current = getA(date, shift.id, "פרח");
       if (current.length >= needed) return;
-      const isMorning = shift.id === "morning" || shift.id === "open";
-      const candidates = parchs
+      const isMorning = shiftType === "morning";
+
+      const getCandidatesP = (allowRelax) => parchs
         .filter(emp => {
           if (current.includes(emp.id)) return false;
           if (!isAv(emp.id, date, shift.id)) return false;
           if (worksToday(emp.id, date)) return false;
+          if (!allowRelax) {
+            const c = countShifts(emp.id);
+            if (isMorning && c.morning > c.evening) return false;
+            if (!isMorning && c.evening > c.morning) return false;
+          }
           return true;
         })
         .sort((a, b) => {
@@ -281,13 +301,14 @@ function autoAssign(employees, availability, fridayRota, assigned, weekDates, we
           const ratioA = isMorning ? cA.morning - cA.evening : cA.evening - cA.morning;
           const ratioB = isMorning ? cB.morning - cB.evening : cB.evening - cB.morning;
           if (ratioA !== ratioB) return ratioA - ratioB;
-          return cA.total - cB.total;
+          if (cA.total !== cB.total) return cA.total - cB.total;
+          return (shuffleSeed||0) % 2 === 0 ? a.id - b.id : b.id - a.id;
         });
+
+      let candidates = getCandidatesP(false);
+      if (candidates.length === 0) candidates = getCandidatesP(true);
       if (candidates.length > 0) {
-        const pickP = (shuffleSeed && candidates.length > 1)
-          ? candidates[shuffleSeed % Math.min(candidates.length, 3)]
-          : candidates[0];
-        setA(date, shift.id, "פרח", [...current, (pickP||candidates[0]).id]);
+        setA(date, shift.id, "פרח", [...current, candidates[0].id]);
       }
     });
   });
