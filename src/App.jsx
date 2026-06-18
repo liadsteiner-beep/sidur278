@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "firebase/firestore";
 
@@ -354,9 +354,9 @@ function useLongPress(onLongPress, onClick, ms = 500) {
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 // ── TIME EDIT MODAL ── standalone to prevent re-creation on re-render
-const TimeEditModal = React.memo(function TimeEditModal({modal, onSave, onReset, onClose, formatDate}) {
-  const [st, setSt] = React.useState(modal.stVal || "");
-  const [en, setEn] = React.useState(modal.enVal || "");
+const TimeEditModal = memo(function TimeEditModal({modal, onSave, onReset, onClose, formatDate}) {
+  const [st, setSt] = useState(modal.stVal || "");
+  const [en, setEn] = useState(modal.enVal || "");
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div style={{background:"#fff",borderRadius:16,padding:24,width:"100%",maxWidth:320,boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
