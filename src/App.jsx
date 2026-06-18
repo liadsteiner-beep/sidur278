@@ -1723,7 +1723,7 @@ export default function App() {
                               const n=getEmpShiftNote(id,date,sh.id);
                               const customTime=getEmpShiftTime(id,date,sh.id);
                               const isHarish=n&&n.includes("חריש בעיר");
-                              const isDept=n&&["קוסמטיקה","מחלקה כללית","אחמ"ש"].some(d=>n.includes(d));
+                              const isDept=n&&["קוסמטיקה","מחלקה כללית",'אחמ"ש'].some(d=>n.includes(d));
                               const bg = isMe?(isPast?"#bfdbfe":"#dbeafe"):isHarish?"#fdf2f4":isDept?"#fdf4e7":"transparent";
                               const clr = isMe?"#1d4ed8":isHarish?"#8b2a3a":isDept?"#92400e":"#1e293b";
                               const noteClr = isHarish?"#8b2a3a":isDept?"#92400e":"#334155";
