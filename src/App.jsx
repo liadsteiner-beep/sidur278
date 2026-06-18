@@ -353,7 +353,7 @@ function useLongPress(onLongPress, onClick, ms = 500) {
 }
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
-export default // ── TIME EDIT MODAL ── standalone to prevent re-creation on re-render
+// ── TIME EDIT MODAL ── standalone to prevent re-creation on re-render
 const TimeEditModal = React.memo(function TimeEditModal({modal, onSave, onReset, onClose, formatDate}) {
   const [st, setSt] = React.useState(modal.stVal || "");
   const [en, setEn] = React.useState(modal.enVal || "");
@@ -391,7 +391,7 @@ const TimeEditModal = React.memo(function TimeEditModal({modal, onSave, onReset,
   );
 });
 
-function App() {
+export default function App() {
   const [view, setView]               = useState("loading");
   const [currentUser, setCurrentUser] = useState(null);
   const [pwInput, setPwInput]         = useState("");
