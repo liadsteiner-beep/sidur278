@@ -754,13 +754,13 @@ export default function App() {
     const localAssignedKeys = Object.keys(currentLocal?.assigned || {}).length;
     const stateAssignedKeys = Object.keys(assigned).length;
     const saveAssigned = stateAssignedKeys > 0 ? assigned : (currentLocal?.assigned || {});
-    const saveTs = stateAssignedKeys > 0 ? Date.now() : (currentLocal?.assignedUpdatedAt || 0);
+    const saveTs = assignedUpdatedAt > 0 ? assignedUpdatedAt : (currentLocal?.assignedUpdatedAt || 0);
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ employees, availability, assigned: saveAssigned, assignedUpdatedAt: saveTs, notes, empNotes, empPasswords, managerPassword, fridayRota, published, publishedWeekStart, publishedAssigned, publishedByWeek, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAvail, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep })); } catch {}
     // אל תשמור assigned ריק ל-Firebase — עלול לדרוס שיבוצים קיימים
     const saveObj = { employees, notes, empNotes, empPasswords, managerPassword, fridayRota, published, publishedWeekStart, publishedAssigned, publishedByWeek, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep };
     if (Object.keys(assigned).length > 0) {
       saveObj.assigned = assigned;
-      saveObj.assignedUpdatedAt = Date.now();
+      // לא שולח assignedUpdatedAt בכל שמירה — רק בשינוי מכוון
     }
     fbSave(saveObj);
   }, [employees, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, publishedWeekStart, publishedAssigned, publishedByWeek, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep]);
@@ -1087,8 +1087,10 @@ export default function App() {
       });
       newAssigned[k] = [...cur, empId];
       setAssigned(newAssigned);
+      setAssignedUpdatedAt(Date.now());
     } else {
       setAssigned(prev=>({...prev,[k]:cur.filter(id=>id!==empId)}));
+      setAssignedUpdatedAt(Date.now());
     }
   }
 
