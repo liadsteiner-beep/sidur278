@@ -445,6 +445,8 @@ export default function App() {
   const [changePwErr, setChangePwErr]     = useState("");
   const [hoveredEmp, setHoveredEmp] = useState(null);
   const dragRef = useRef(null);
+  const pressTimerRef = useRef(null);
+  const pressFiredRef = useRef(false);
   const lastEmpClickRef = useRef({id:null, time:0, date:null, sh:null});
   const [scheduleChanged, setScheduleChanged] = useState(false);
   const [scheduleChangeDiff, setScheduleChangeDiff] = useState([]); // [{dateStr, shiftId, role, added[], removed[]}]
@@ -2756,8 +2758,6 @@ export default function App() {
                                   const emp=employees.find(e=>e.id===id);
                                   const customTime=getEmpShiftTime(id,date,shift.id);
                                   // Long press handler for time edit
-                                  let pressTimer = null;
-                                  let pressFired = false;
                                   return (
                                     <div key={id} data-empid={id} style={{position:"relative"}}
                                       onMouseEnter={()=>{
@@ -2767,7 +2767,7 @@ export default function App() {
                                       onMouseLeave={()=>{
                                         document.querySelectorAll(`[data-empid="${id}"]`).forEach(el=>{ if(el.dataset.empid===String(id)) el.classList.remove("emp-hov"); });
                                         document.getElementById("assign-table")?.classList.remove("emp-hovering");
-                                        if(pressTimer) clearTimeout(pressTimer);
+                                        if(pressTimerRef.current) { clearTimeout(pressTimerRef.current); pressTimerRef.current=null; }
                                       }}>
                                       {/* נקודה כתומה אם שובץ ידנית מחוץ לזמינות */}
                                       {!isAv(id,date,shift.id) && <div style={{position:"absolute",top:-3,right:-3,width:8,height:8,background:"#f59e0b",borderRadius:"50%",border:"1.5px solid #fff",zIndex:2}} title="שובץ ידנית — לא ציין זמינות"></div>}
@@ -2779,30 +2779,32 @@ export default function App() {
                                         onDrop={e=>{ e.preventDefault(); handleDrop(date,shift.id,role,id); }}
                                         className="emp-btn emp-assigned"
                                         onMouseDown={()=>{
-                                          pressFired=false;
-                                          pressTimer=setTimeout(()=>{
-                                            pressFired=true;
-                                            pressTimer=null;
+                                          pressFiredRef.current=false;
+                                          pressTimerRef.current=setTimeout(()=>{
+                                            pressFiredRef.current=true;
+                                            pressTimerRef.current=null;
                                             openTimeEditModal(id, date, shift.id);
                                           }, 600);
                                         }}
                                         onMouseUp={()=>{
-                                          if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}
-                                          if(!pressFired) toggleAssign(date,shift.id,role,id);
-                                          pressFired=false;
+                                          if(pressTimerRef.current){clearTimeout(pressTimerRef.current);pressTimerRef.current=null;}
+                                          if(!pressFiredRef.current) toggleAssign(date,shift.id,role,id);
+                                          pressFiredRef.current=false;
                                         }}
-                                        onTouchStart={()=>{
-                                          pressFired=false;
-                                          pressTimer=setTimeout(()=>{
-                                            pressFired=true;
-                                            pressTimer=null;
+                                        onTouchStart={(e)=>{
+                                          e.preventDefault();
+                                          pressFiredRef.current=false;
+                                          pressTimerRef.current=setTimeout(()=>{
+                                            pressFiredRef.current=true;
+                                            pressTimerRef.current=null;
                                             openTimeEditModal(id, date, shift.id);
                                           }, 600);
                                         }}
                                         onTouchEnd={(e)=>{
-                                          if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}
-                                          if(!pressFired) { e.preventDefault(); toggleAssign(date,shift.id,role,id); }
-                                          pressFired=false;
+                                          e.preventDefault();
+                                          if(pressTimerRef.current){clearTimeout(pressTimerRef.current);pressTimerRef.current=null;}
+                                          if(!pressFiredRef.current) toggleAssign(date,shift.id,role,id);
+                                          pressFiredRef.current=false;
                                         }}
                                         style={{borderRadius:"6px",padding:"3px 5px",fontSize:11,fontWeight:"700",color:"#14532d",cursor:"grab",width:"100%",transition:"all 0.15s",background:"#dcfce7",border:`2px solid ${isAv(id,date,shift.id)?"#22c55e":"#f59e0b"}`,userSelect:"none"}}>
                                         ✓ {emp?.name}
