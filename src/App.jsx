@@ -3495,8 +3495,11 @@ export default function App() {
               <div style={{flex:1}}>
                 <div style={{fontSize:11,color:"#64748b",marginBottom:4,direction:"rtl",textAlign:"center"}}>סיום</div>
                 <input style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 10px",width:"100%",fontSize:17,textAlign:"center",fontWeight:"700",direction:"ltr"}}
-                  maxLength={5} defaultValue={m.enVal||m._enDefault||""}
-                  onFocus={e=>{if(!e.target.value&&m._enDefault)e.target.value=m._enDefault;}}
+                  maxLength={5} placeholder={m.enVal||m._enDefault||"HH:MM"}
+                  onFocus={e=>e.target.select()}
+                  onKeyDown={e=>{
+                    if(!/[0-9]|Backspace|Delete|Tab/.test(e.key)) e.preventDefault();
+                  }}
                   onChange={e=>{
                     let v=e.target.value.replace(/[^0-9]/g,"");
                     if(v.length>=2) v=v.slice(0,2)+":"+v.slice(2,4);
@@ -3509,8 +3512,11 @@ export default function App() {
               <div style={{flex:1}}>
                 <div style={{fontSize:11,color:"#64748b",marginBottom:4,direction:"rtl",textAlign:"center"}}>התחלה</div>
                 <input style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 10px",width:"100%",fontSize:17,textAlign:"center",fontWeight:"700",direction:"ltr"}}
-                  maxLength={5} defaultValue={m.stVal||m._stDefault||""} autoFocus
-                  onFocus={e=>{if(!e.target.value&&m._stDefault)e.target.value=m._stDefault;}}
+                  maxLength={5} placeholder={m.stVal||m._stDefault||"HH:MM"} autoFocus
+                  onFocus={e=>e.target.select()}
+                  onKeyDown={e=>{
+                    if(!/[0-9]|Backspace|Delete|Tab/.test(e.key)) e.preventDefault();
+                  }}
                   onChange={e=>{
                     let v=e.target.value.replace(/[^0-9]/g,"");
                     if(v.length>=2) v=v.slice(0,2)+":"+v.slice(2,4);
