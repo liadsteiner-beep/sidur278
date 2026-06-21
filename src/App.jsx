@@ -2715,13 +2715,45 @@ export default function App() {
               </div>
             )}
 
-            <div style={{overflowX:"auto",overflowY:"auto",maxHeight:"calc(100vh - 280px)",marginBottom:12}}>
-              <table id="assign-table" style={{width:"100%",borderCollapse:"collapse",fontSize:12,background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.08)",minWidth:500}}>
+            <div
+              id="assign-table-wrap"
+              style={{overflow:"hidden",marginBottom:12,touchAction:"pinch-zoom"}}
+              onWheel={e=>{
+                if(e.ctrlKey){
+                  e.preventDefault();
+                  const el=document.getElementById("assign-table-wrap");
+                  const cur=parseFloat(el.dataset.scale||"1");
+                  const next=Math.min(2,Math.max(0.5,cur+(e.deltaY<0?0.1:-0.1)));
+                  el.dataset.scale=next;
+                  el.querySelector("table").style.transform=`scale(${next})`;
+                  el.querySelector("table").style.transformOrigin="top right";
+                }
+              }}
+              onTouchStart={e=>{
+                if(e.touches.length===2){
+                  const el=document.getElementById("assign-table-wrap");
+                  el.dataset.startDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+                  el.dataset.startScale=el.dataset.scale||"1";
+                }
+              }}
+              onTouchMove={e=>{
+                if(e.touches.length===2){
+                  const el=document.getElementById("assign-table-wrap");
+                  const dist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+                  const ratio=dist/parseFloat(el.dataset.startDist||dist);
+                  const next=Math.min(2,Math.max(0.4,parseFloat(el.dataset.startScale||"1")*ratio));
+                  el.dataset.scale=next;
+                  el.querySelector("table").style.transform=`scale(${next})`;
+                  el.querySelector("table").style.transformOrigin="top right";
+                }
+              }}
+            >
+              <table id="assign-table" style={{width:"100%",borderCollapse:"collapse",fontSize:12,background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.08)",tableLayout:"fixed",transition:"transform 0.1s"}}>
                 <thead>
                   <tr style={{background:"#1e293b",color:"#f8fafc"}}>
-                    <th style={{padding:"8px",textAlign:"right",fontWeight:"600",minWidth:80,fontSize:11,border:"0.5px solid #0F6E56"}}>משמרת</th>
+                    <th style={{padding:"8px",textAlign:"right",fontWeight:"600",fontSize:11,border:"0.5px solid #0F6E56"}}>משמרת</th>
                     {weekDates.map(date=>(
-                      <th key={dateKey(date)} style={{padding:"8px 4px",textAlign:"center",fontWeight:"600",minWidth:80}}>
+                      <th key={dateKey(date)} style={{padding:"8px 4px",textAlign:"center",fontWeight:"600"}}>
                         <div style={{fontSize:11}}>{date.toLocaleDateString("he-IL",{weekday:"short"})}</div>
                         <div style={{fontSize:10,opacity:0.7}}>{formatDateShort(date)}</div>
                         {isFirstOfMonth(date)&&<div style={{fontSize:9,color:"#fbbf24"}}>🔒</div>}
@@ -2750,7 +2782,7 @@ export default function App() {
                           const isMissing=filled<needed;
                           const hovEmpAvail = hoveredEmp && isAv(hoveredEmp, date, shift.id);
                           return (
-                            <td key={dateKey(date)} style={{padding:"4px",textAlign:"center",background:isMissing?"#fef2f2":hovEmpAvail?"#f0fdf4":"#fff",verticalAlign:"top",minWidth:80}}>
+                            <td key={dateKey(date)} style={{padding:"4px",textAlign:"center",background:isMissing?"#fef2f2":hovEmpAvail?"#f0fdf4":"#fff",verticalAlign:"top"}}>
                               {getShiftNote(date,shift.id)&&<div style={{fontSize:9,color:"#92400e",background:"#fef3c7",borderRadius:3,padding:"1px 3px",marginBottom:2}}>💬</div>}
                               {isMissing&&<div style={{fontSize:9,color:"#ef4444",fontWeight:"700",marginBottom:2}}>⚠️ חסר</div>}
                               <div style={{display:"flex",flexDirection:"column",gap:2,marginBottom:2}}>
