@@ -935,41 +935,6 @@ export default function App() {
     }
   }
 
-  function TimeEditModalInline({modal, onSave, onReset, onClose, formatDate}) {
-    const [st, setSt] = useState(modal?.stVal || "");
-    const [en, setEn] = useState(modal?.enVal || "");
-    return (
-      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-        <div style={{background:"#fff",borderRadius:16,padding:24,width:"100%",maxWidth:320,boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
-          <div style={{fontWeight:"800",fontSize:15,marginBottom:2}}>⏰ שינוי שעות</div>
-          <div style={{fontSize:12,color:"#64748b",marginBottom:16}}>{modal.empName} — {formatDate(modal.date)}</div>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,direction:"ltr"}}>
-            <div style={{flex:1}}>
-              <div style={{fontSize:11,color:"#64748b",marginBottom:4,direction:"rtl",textAlign:"center"}}>סיום</div>
-              <input style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 10px",width:"100%",fontSize:17,textAlign:"center",fontWeight:"700",direction:"ltr"}}
-                placeholder="16:00" maxLength={5} value={en}
-                onChange={e=>{let v=e.target.value.replace(/[^0-9:]/g,"");if(v.length===4&&!v.includes(":"))v=v.slice(0,2)+":"+v.slice(2);setEn(v);}}
-              />
-            </div>
-            <span style={{fontSize:20,color:"#94a3b8",marginTop:16}}>—</span>
-            <div style={{flex:1}}>
-              <div style={{fontSize:11,color:"#64748b",marginBottom:4,direction:"rtl",textAlign:"center"}}>התחלה</div>
-              <input style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 10px",width:"100%",fontSize:17,textAlign:"center",fontWeight:"700",direction:"ltr"}}
-                placeholder="08:30" maxLength={5} value={st} autoFocus
-                onChange={e=>{let v=e.target.value.replace(/[^0-9:]/g,"");if(v.length===4&&!v.includes(":"))v=v.slice(0,2)+":"+v.slice(2);setSt(v);}}
-              />
-            </div>
-          </div>
-          <div style={{display:"flex",gap:8}}>
-            <button style={{flex:2,background:"#0ea5e9",color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:"700",cursor:"pointer"}} onClick={()=>onSave(st,en)}>שמור</button>
-            <button style={{flex:1,background:"#94a3b8",color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:"700",cursor:"pointer"}} onClick={onReset}>אפס</button>
-            <button style={{flex:1,background:"#e2e8f0",color:"#64748b",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:"700",cursor:"pointer"}} onClick={onClose}>ביטול</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   function openTimeEditModal(empId, date, shiftId) {
     const emp = employees.find(e => e.id === empId);
     setTimeEditModal({
@@ -2293,23 +2258,47 @@ export default function App() {
           <div style={{textAlign:"center",color:"#94a3b8",fontSize:11,marginTop:4}}>נשמר אוטומטית</div>
         </div>
         {changePwModal && <ChangePwModal />}
-        {timeEditModal && <TimeEditModalInline
-  modal={timeEditModal}
-  onSave={(st,en)=>{
-    if(st) setEmpShiftNote(timeEditModal.empId,timeEditModal.date,timeEditModal.shiftId+"|st",st);
-    if(en) setEmpShiftNote(timeEditModal.empId,timeEditModal.date,timeEditModal.shiftId+"|en",en);
-    setTimeEditModal(null);
-    showToast("שעות עודכנו ✓");
-  }}
-  onReset={()=>{
-    setEmpShiftNote(timeEditModal.empId,timeEditModal.date,timeEditModal.shiftId+"|st","");
-    setEmpShiftNote(timeEditModal.empId,timeEditModal.date,timeEditModal.shiftId+"|en","");
-    setTimeEditModal(null);
-    showToast("שעות אופסו ✓");
-  }}
-  onClose={()=>setTimeEditModal(null)}
-  formatDate={formatDate}
-/>}
+        {timeEditModal && (()=>{
+  const m = timeEditModal;
+  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>{if(e.target===e.currentTarget)setTimeEditModal(null);}}>
+    <div style={{background:"#fff",borderRadius:16,padding:24,width:"100%",maxWidth:320,boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+      <div style={{fontWeight:"800",fontSize:15,marginBottom:2}}>⏰ שינוי שעות</div>
+      <div style={{fontSize:12,color:"#64748b",marginBottom:16}}>{m.empName} — {formatDate(m.date)}</div>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,direction:"ltr"}}>
+        <div style={{flex:1}}>
+          <div style={{fontSize:11,color:"#64748b",marginBottom:4,direction:"rtl",textAlign:"center"}}>סיום</div>
+          <input style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 10px",width:"100%",fontSize:17,textAlign:"center",fontWeight:"700",direction:"ltr"}}
+            placeholder="16:00" maxLength={5} defaultValue={m.enVal||""}
+            onChange={e=>{let v=e.target.value.replace(/[^0-9:]/g,"");if(v.length===4&&!v.includes(":"))v=v.slice(0,2)+":"+v.slice(2);setTimeEditModal(prev=>({...prev,_en:v}));}}
+          />
+        </div>
+        <span style={{fontSize:20,color:"#94a3b8",marginTop:16}}>—</span>
+        <div style={{flex:1}}>
+          <div style={{fontSize:11,color:"#64748b",marginBottom:4,direction:"rtl",textAlign:"center"}}>התחלה</div>
+          <input style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 10px",width:"100%",fontSize:17,textAlign:"center",fontWeight:"700",direction:"ltr"}}
+            placeholder="08:30" maxLength={5} defaultValue={m.stVal||""} autoFocus
+            onChange={e=>{let v=e.target.value.replace(/[^0-9:]/g,"");if(v.length===4&&!v.includes(":"))v=v.slice(0,2)+":"+v.slice(2);setTimeEditModal(prev=>({...prev,_st:v}));}}
+          />
+        </div>
+      </div>
+      <div style={{display:"flex",gap:8}}>
+        <button style={{flex:2,background:"#0ea5e9",color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:"700",cursor:"pointer"}} onClick={()=>{
+          const st=m._st!==undefined?m._st:m.stVal||"";
+          const en=m._en!==undefined?m._en:m.enVal||"";
+          if(st) setEmpShiftNote(m.empId,m.date,m.shiftId+"|st",st);
+          if(en) setEmpShiftNote(m.empId,m.date,m.shiftId+"|en",en);
+          setTimeEditModal(null);showToast("שעות עודכנו ✓");
+        }}>שמור</button>
+        <button style={{flex:1,background:"#94a3b8",color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:"700",cursor:"pointer"}} onClick={()=>{
+          setEmpShiftNote(m.empId,m.date,m.shiftId+"|st","");
+          setEmpShiftNote(m.empId,m.date,m.shiftId+"|en","");
+          setTimeEditModal(null);showToast("שעות אופסו ✓");
+        }}>אפס</button>
+        <button style={{flex:1,background:"#e2e8f0",color:"#64748b",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:"700",cursor:"pointer"}} onClick={()=>setTimeEditModal(null)}>ביטול</button>
+      </div>
+    </div>
+  </div>;
+})()}
         {showChangeModal && (
           <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={e=>{if(e.target===e.currentTarget)setShowChangeModal(false);}}>
             <div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"20px 20px 36px",width:"100%",maxWidth:480}}>
@@ -2418,7 +2407,7 @@ export default function App() {
           </div>
           {missing.length>0 && <span style={{background:"#ef4444",color:"#fff",borderRadius:"20px",padding:"2px 10px",fontSize:12,fontWeight:"700"}}>⚠️ {missing.length} חסרים</span>}
           {pendingVacations.length>0 && <span style={{background:"#f59e0b",color:"#000",borderRadius:"20px",padding:"2px 10px",fontSize:12,fontWeight:"700"}}>🌴 {pendingVacations.length} חופשות</span>}
-          <button style={S.btnSm("#0ea5e9")} onClick={()=>{
+          <button style={{background:"none",border:"none",color:"#f8fafc",cursor:"pointer",padding:4,display:"flex",alignItems:"center",opacity:0.8}} onClick={()=>{
             getDoc(doc(db,"pharmacy","schedule")).then(snap=>{
               if(!snap.exists()) return;
               const d=snap.data();
@@ -2430,7 +2419,12 @@ export default function App() {
               if(d.empShiftNotes) setEmpShiftNotes(prev=>({...d.empShiftNotes,...prev}));
               showToast("נתונים עודכנו ✓");
             });
-          }}>🔄</button>
+          }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+          </button>
           <button style={S.btnSm("#475569")} onClick={openChangePw}>🔑 סיסמה</button>
           <button style={S.btnSm()} onClick={logout}>יציאה</button>
         </div>
