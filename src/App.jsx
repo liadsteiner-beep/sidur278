@@ -401,7 +401,7 @@ const TimeEditModal = function TimeEditModal({modal, onSave, onReset, onClose, f
       </div>
     </div>
   );
-});
+}
 
 export default function App() {
   const [view, setView]               = useState("loading");
