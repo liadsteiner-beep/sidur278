@@ -355,8 +355,11 @@ function useLongPress(onLongPress, onClick, ms = 500) {
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 // ── TIME EDIT MODAL ── standalone to prevent re-creation on re-render
 const TimeEditModal = memo(function TimeEditModal({modal, onSave, onReset, onClose, formatDate}) {
-  const [st, setSt] = useState(modal?.stVal || "");
-  const [en, setEn] = useState(modal?.enVal || "");
+  const [st, setSt] = useState("");
+  const [en, setEn] = useState("");
+  useEffect(() => {
+    if (modal) { setSt(modal.stVal || ""); setEn(modal.enVal || ""); }
+  }, [modal?.empId, modal?.shiftId, modal?.date]);
   if (!modal) return null;
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
@@ -400,6 +403,7 @@ export default function App() {
   const [showManagerLogin, setShowManagerLogin] = useState(false);
   const [employees, setEmployees]     = useState(INITIAL_EMPLOYEES);
   const [availability, setAvailability] = useState({});
+  const [assignedUpdatedAt, setAssignedUpdatedAt] = useState(0);
   const [assigned, setAssigned]       = useState(() => {
     try {
       const local = loadLocalData();
@@ -591,8 +595,29 @@ export default function App() {
         // כל עדכון מ-Firebase — עדכן זמינויות מיידית
         if (d.availability) setAvailability(d.availability);
       }
-      // assigned נטען מ-localStorage בלבד — Firebase לא ידרוס
-      // (הסינכרון ל-Firebase נעשה בכל שינוי דרך saveData)
+      // השווה timestamps — מי עדכני יותר מנצח
+      {
+        const localData = loadLocalData();
+        const localAssigned = localData?.assigned || {};
+        const localTs = localData?.assignedUpdatedAt || 0;
+        const fbAssigned = d.assigned || {};
+        const fbTs = d.assignedUpdatedAt || 0;
+        const localKeys = Object.keys(localAssigned).length;
+        const fbKeys = Object.keys(fbAssigned).length;
+        if (localKeys > 0 && localTs >= fbTs) {
+          setAssigned(localAssigned);
+          if (localTs > fbTs) {
+            setDoc(doc(db,"pharmacy","schedule"),{assigned:localAssigned,assignedUpdatedAt:localTs},{merge:true}).catch(console.error);
+          }
+        } else if (fbKeys > 0 && fbTs > localTs) {
+          setAssigned(fbAssigned);
+          setAssignedUpdatedAt(fbTs);
+        } else if (localKeys > 0) {
+          setAssigned(localAssigned);
+        } else if (fbKeys > 0) {
+          setAssigned(fbAssigned);
+        }
+      }
       // שחזר publishedByWeek מגיבוי
       {
         const RESTORE_KEY = "schedule_restored_v8";
@@ -762,10 +787,14 @@ export default function App() {
     const localAssignedKeys = Object.keys(currentLocal?.assigned || {}).length;
     const stateAssignedKeys = Object.keys(assigned).length;
     const saveAssigned = stateAssignedKeys > 0 ? assigned : (currentLocal?.assigned || {});
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ employees, availability, assigned: saveAssigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, publishedWeekStart, publishedAssigned, publishedByWeek, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAvail, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep })); } catch {}
+    const saveTs = stateAssignedKeys > 0 ? Date.now() : (currentLocal?.assignedUpdatedAt || 0);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ employees, availability, assigned: saveAssigned, assignedUpdatedAt: saveTs, notes, empNotes, empPasswords, managerPassword, fridayRota, published, publishedWeekStart, publishedAssigned, publishedByWeek, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAvail, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep })); } catch {}
     // אל תשמור assigned ריק ל-Firebase — עלול לדרוס שיבוצים קיימים
     const saveObj = { employees, notes, empNotes, empPasswords, managerPassword, fridayRota, published, publishedWeekStart, publishedAssigned, publishedByWeek, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep };
-    if (Object.keys(assigned).length > 0) saveObj.assigned = assigned;
+    if (Object.keys(assigned).length > 0) {
+      saveObj.assigned = assigned;
+      saveObj.assignedUpdatedAt = Date.now();
+    }
     fbSave(saveObj);
   }, [employees, assigned, notes, empNotes, empPasswords, managerPassword, fridayRota, published, publishedWeekStart, publishedAssigned, publishedByWeek, dayRemarks, shiftNotes, vacations, empShiftNotes, dutyPeriod, dutyAssign, dutyPublished, dutyAvailOpen, dutySetupStep]);
 
