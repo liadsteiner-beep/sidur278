@@ -1760,7 +1760,7 @@ export default function App() {
                               return <div key={id} style={{padding:"2px 3px",borderRadius:4,background:bg,marginBottom:2,opacity:isPast?0.7:1}}>
                                 <span style={{fontSize:14,fontWeight:isMe?"800":"700",color:clr,display:"block"}}>{emp?.name}{isMe?" ⭐":""}</span>
                                 <span style={{fontSize:11,color:noteClr,fontWeight:(isHarish||isDept)?"700":"600",display:"block",whiteSpace:"nowrap"}}>{customTime||getShiftTime(sh,role)}{label?` ${label}`:""}</span>
-                                {n&&<span style={{fontSize:11,color:noteClr,fontStyle:"italic",fontWeight:"600",display:"block",borderTop:`0.5px solid ${borderClr}`,marginTop:1,paddingTop:1,whiteSpace:"nowrap"}}>{n}</span>}
+                                {n&&<span style={{fontSize:11,color:noteClr,fontStyle:"italic",fontWeight:"600",display:"block",borderTop:`0.5px solid ${isHarish?"#f0b8c0":"#e2e8f0"}`,marginTop:1,paddingTop:1,whiteSpace:"nowrap"}}>{n}</span>}
                               </div>;
                             })}
                             {!allEmps.length&&<span style={{color:"#e2e8f0",fontSize:10,display:"block",textAlign:"center"}}>—</span>}
