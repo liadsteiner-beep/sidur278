@@ -362,12 +362,12 @@ function useLongPress(onLongPress, onClick, ms = 500) {
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 // ── TIME EDIT MODAL ── standalone to prevent re-creation on re-render
-const TimeEditModal = memo(function TimeEditModal({modal, onSave, onReset, onClose, formatDate}) {
+const TimeEditModal = function TimeEditModal({modal, onSave, onReset, onClose, formatDate}) {
   const [st, setSt] = useState("");
   const [en, setEn] = useState("");
   useEffect(() => {
     if (modal) { setSt(modal.stVal || ""); setEn(modal.enVal || ""); }
-  }, [modal?.empId, modal?.shiftId, modal?.date]);
+  }, [modal?.empId, modal?.shiftId, modal?.date?.getTime?.()]);
   if (!modal) return null;
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
