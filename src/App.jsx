@@ -939,13 +939,20 @@ export default function App() {
 
   function openTimeEditModal(empId, date, shiftId) {
     const emp = employees.find(e => e.id === empId);
+    const shift = (DAY_SHIFTS[date.getDay()]||[]).find(s=>s.id===shiftId);
+    const defaultTime = shift ? (emp?.role==="פרח"&&shift.timeFrach ? shift.timeFrach : shift.time) : "";
+    const [defSt, defEn] = defaultTime ? defaultTime.split("-") : ["",""];
+    const savedSt = getEmpShiftNote(empId, date, shiftId+"|st");
+    const savedEn = getEmpShiftNote(empId, date, shiftId+"|en");
     setTimeEditModal({
       empId,
       empName: emp?.name || "",
       date,
       shiftId,
-      stVal: getEmpShiftNote(empId, date, shiftId+"|st") || "",
-      enVal: getEmpShiftNote(empId, date, shiftId+"|en") || "",
+      stVal: savedSt || defSt || "",
+      enVal: savedEn || defEn || "",
+      _stDefault: defSt || "",
+      _enDefault: defEn || "",
     });
   }
 
@@ -3488,23 +3495,35 @@ export default function App() {
               <div style={{flex:1}}>
                 <div style={{fontSize:11,color:"#64748b",marginBottom:4,direction:"rtl",textAlign:"center"}}>סיום</div>
                 <input style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 10px",width:"100%",fontSize:17,textAlign:"center",fontWeight:"700",direction:"ltr"}}
-                  placeholder="16:00" maxLength={5} defaultValue={m.enVal||""}
-                  onChange={e=>{let v=e.target.value.replace(/[^0-9:]/g,"");if(v.length===4&&!v.includes(":"))v=v.slice(0,2)+":"+v.slice(2);setTimeEditModal(prev=>({...prev,_en:v}));}}
+                  maxLength={5} defaultValue={m.enVal||m._enDefault||""}
+                  onFocus={e=>{if(!e.target.value&&m._enDefault)e.target.value=m._enDefault;}}
+                  onChange={e=>{
+                    let v=e.target.value.replace(/[^0-9]/g,"");
+                    if(v.length>=2) v=v.slice(0,2)+":"+v.slice(2,4);
+                    e.target.value=v;
+                    setTimeEditModal(prev=>({...prev,_en:v}));
+                  }}
                 />
               </div>
               <span style={{fontSize:20,color:"#94a3b8",marginTop:16}}>—</span>
               <div style={{flex:1}}>
                 <div style={{fontSize:11,color:"#64748b",marginBottom:4,direction:"rtl",textAlign:"center"}}>התחלה</div>
                 <input style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 10px",width:"100%",fontSize:17,textAlign:"center",fontWeight:"700",direction:"ltr"}}
-                  placeholder="08:30" maxLength={5} defaultValue={m.stVal||""} autoFocus
-                  onChange={e=>{let v=e.target.value.replace(/[^0-9:]/g,"");if(v.length===4&&!v.includes(":"))v=v.slice(0,2)+":"+v.slice(2);setTimeEditModal(prev=>({...prev,_st:v}));}}
+                  maxLength={5} defaultValue={m.stVal||m._stDefault||""} autoFocus
+                  onFocus={e=>{if(!e.target.value&&m._stDefault)e.target.value=m._stDefault;}}
+                  onChange={e=>{
+                    let v=e.target.value.replace(/[^0-9]/g,"");
+                    if(v.length>=2) v=v.slice(0,2)+":"+v.slice(2,4);
+                    e.target.value=v;
+                    setTimeEditModal(prev=>({...prev,_st:v}));
+                  }}
                 />
               </div>
             </div>
             <div style={{display:"flex",gap:8}}>
               <button style={{flex:2,background:"#0ea5e9",color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:"700",cursor:"pointer"}} onClick={()=>{
-                const st=m._st!==undefined?m._st:m.stVal||"";
-                const en=m._en!==undefined?m._en:m.enVal||"";
+                const st=m._st!==undefined&&m._st!==""?m._st:(m.stVal||"");
+                const en=m._en!==undefined&&m._en!==""?m._en:(m.enVal||"");
                 if(st) setEmpShiftNote(m.empId,m.date,m.shiftId+"|st",st);
                 if(en) setEmpShiftNote(m.empId,m.date,m.shiftId+"|en",en);
                 setTimeEditModal(null);showToast("שעות עודכנו ✓");
