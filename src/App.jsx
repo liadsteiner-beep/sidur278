@@ -2782,23 +2782,27 @@ export default function App() {
                                           pressFired=false;
                                           pressTimer=setTimeout(()=>{
                                             pressFired=true;
+                                            pressTimer=null;
                                             openTimeEditModal(id, date, shift.id);
                                           }, 600);
                                         }}
                                         onMouseUp={()=>{
-                                          clearTimeout(pressTimer);
+                                          if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}
                                           if(!pressFired) toggleAssign(date,shift.id,role,id);
+                                          pressFired=false;
                                         }}
                                         onTouchStart={()=>{
                                           pressFired=false;
                                           pressTimer=setTimeout(()=>{
                                             pressFired=true;
+                                            pressTimer=null;
                                             openTimeEditModal(id, date, shift.id);
                                           }, 600);
                                         }}
                                         onTouchEnd={(e)=>{
-                                          clearTimeout(pressTimer);
+                                          if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}
                                           if(!pressFired) { e.preventDefault(); toggleAssign(date,shift.id,role,id); }
+                                          pressFired=false;
                                         }}
                                         style={{borderRadius:"6px",padding:"3px 5px",fontSize:11,fontWeight:"700",color:"#14532d",cursor:"grab",width:"100%",transition:"all 0.15s",background:"#dcfce7",border:`2px solid ${isAv(id,date,shift.id)?"#22c55e":"#f59e0b"}`,userSelect:"none"}}>
                                         ✓ {emp?.name}
