@@ -2985,41 +2985,6 @@ export default function App() {
               </div>
             </div>
 
-            <div style={S.card}>
-              <div style={S.sTitle}>📱 שלח לכל עובד בנפרד</div>
-              <div style={{display:"flex",gap:6,marginBottom:12,background:"#f1f5f9",borderRadius:8,padding:4}}>
-                <button style={{...S.tab(sendMode==="personal"),flex:1,borderRadius:6}} onClick={()=>setSendMode("personal")}>משמרות שלו בלבד</button>
-                <button style={{...S.tab(sendMode==="full"),flex:1,borderRadius:6}} onClick={()=>setSendMode("full")}>סידור מלא</button>
-              </div>
-              <button style={{...S.btn("#25D366"),width:"100%",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}
-                onClick={()=>{
-                  employees.forEach((emp,i)=>{
-                    const txt = sendMode==="personal" ? buildPersonalText(emp) : buildScheduleText();
-                    if(emp.phone) setTimeout(()=>openWhatsApp(emp.phone,txt),i*800);
-                  });
-                  showToast("פותח ווצאפ לכל עובד...");
-                }}>
-                📤 שלח לכולם בנפרד
-              </button>
-              <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                {employees.map(emp=>{
-                  const stats=getEmpStats(emp.id);
-                  const txt = sendMode==="personal" ? buildPersonalText(emp) : buildScheduleText();
-                  return (
-                    <div key={emp.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:"1px solid #f8fafc"}}>
-                      <div>
-                        <span style={{fontSize:13,fontWeight:"700"}}>{emp.name}</span>
-                        <span style={{...S.badge(emp.role),marginRight:6}}>{emp.role}</span>
-                        {stats.total>0
-                          ? <span style={{fontSize:11,color:"#22c55e",fontWeight:"700"}}>{stats.morning} בוקר • {stats.evening} ערב</span>
-                          : <span style={{fontSize:11,color:"#94a3b8"}}>לא שובץ</span>}
-                      </div>
-                      <button style={S.btnSm(emp.phone?"#25D366":"#94a3b8")} onClick={()=>emp.phone?openWhatsApp(emp.phone,txt):showToast("אין מספר טלפון","err")} title={emp.phone?"שלח ווצאפ":"הוסף מספר בהגדרות"}>📱</button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
           </div>
         )}
 
@@ -3383,51 +3348,52 @@ export default function App() {
 
             <div style={S.card}>
               <div style={{...S.card, marginBottom:12}}>
-                <div style={S.sTitle}>📊 הקצאת משמרות שבועית</div>
-                <div style={{fontSize:11,color:"#64748b",marginBottom:8}}>לאחר שיבוץ אוטומטי — ערכים מתעדכנים אוטומטית. ניתן לשנות ידנית ולשבץ מחדש.</div>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                  <div style={S.sTitle}>📊 הקצאת משמרות</div>
+                  <span style={{fontSize:11,color:"#64748b"}}>{formatDateShort(weekDates[0])}-{formatDateShort(weekDates[6])}</span>
+                </div>
+                <div style={{fontSize:11,color:"#64748b",marginBottom:12}}>לאחר שיבוץ אוטומטי מתעדכן אוטומטית. ניתן לשנות ולשבץ מחדש.</div>
                 {(()=>{
                   const stepBtn = (empId, field, delta, cur) => {
                     const updated = {...(weekBudget||{}), [empId]: {...(cur||{}), [field]: Math.max(0, ((cur||{})[field]||0) + delta)}};
                     setWeekBudget(updated);
                     try{localStorage.setItem("pharmacy_week_budget",JSON.stringify(updated));}catch{}
                   };
-                  const StepCell = ({empId, field, cur}) => {
+                  const stepperStyle = {display:"flex",alignItems:"center",justifyContent:"center",background:"#fff",borderRadius:20,border:"0.5px solid #e2e8f0",padding:"3px 6px",width:90,margin:"0 auto"};
+                  const stepBtnStyle = {width:22,height:22,borderRadius:"50%",border:"none",background:"transparent",color:"#94a3b8",fontSize:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,flexShrink:0};
+                  const Stepper = ({empId, field, cur}) => {
                     const val = (cur||{})[field]||0;
-                    return <td style={{textAlign:"center",padding:"4px 2px"}}>
-                      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
-                        <button onClick={()=>stepBtn(empId,field,-1,cur)} style={{width:20,height:20,borderRadius:"50%",border:"0.5px solid #e2e8f0",background:"#f8fafc",fontSize:14,cursor:"pointer",lineHeight:1,padding:0}}>−</button>
-                        <span style={{fontSize:13,fontWeight:"700",minWidth:16,textAlign:"center"}}>{val}</span>
-                        <button onClick={()=>stepBtn(empId,field,1,cur)} style={{width:20,height:20,borderRadius:"50%",border:"0.5px solid #e2e8f0",background:"#f8fafc",fontSize:14,cursor:"pointer",lineHeight:1,padding:0}}>+</button>
-                      </div>
-                    </td>;
+                    return <div style={stepperStyle}>
+                      <button onClick={()=>stepBtn(empId,field,-1,cur)} style={stepBtnStyle}>−</button>
+                      <span style={{fontSize:15,fontWeight:"500",minWidth:24,textAlign:"center",color:"#1e293b"}}>{val}</span>
+                      <button onClick={()=>stepBtn(empId,field,1,cur)} style={stepBtnStyle}>+</button>
+                    </div>;
                   };
+                  const hdrStyle = {fontSize:12,fontWeight:"500",color:"#64748b",textAlign:"center"};
                   return <>
-                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,marginBottom:8}}>
-                      <thead>
-                        <tr style={{background:"#f8fafc"}}>
-                          <th style={{padding:"5px 6px",textAlign:"right",fontWeight:"700",color:"#475569",borderBottom:"0.5px solid #e2e8f0"}}>עובד</th>
-                          <th style={{padding:"5px 4px",textAlign:"center",fontWeight:"700",color:"#475569",borderBottom:"0.5px solid #e2e8f0"}}>☀️ בוקר</th>
-                          <th style={{padding:"5px 4px",textAlign:"center",fontWeight:"700",color:"#475569",borderBottom:"0.5px solid #e2e8f0"}}>🌙 ערב</th>
-                          <th style={{padding:"5px 4px",textAlign:"center",fontWeight:"700",color:"#475569",borderBottom:"0.5px solid #e2e8f0"}}>סה״כ</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {["רוקח","פרח"].map(role=>[
-                          <tr key={role+"-header"}><td colSpan={4} style={{padding:"6px 6px 2px",fontSize:11,fontWeight:"700",color:role==="רוקח"?"#0369a1":"#15803d",background:role==="רוקח"?"#e0f2fe":"#f0fdf4"}}>{role==="רוקח"?"💊 רוקחים":"🌿 פרחים"}</td></tr>,
-                          ...employees.filter(e=>e.role===role&&((weekBudget||{})[e.id]?.max||0)!==0||(role==="פרח")||(role==="רוקח"&&["סמר","סלאם","שפא","ליאן","סג׳א","ליעד"].includes(e.name))).map(emp=>{
-                            const cur = (weekBudget||{})[emp.id]||{morning:0,evening:0,max:0};
-                            const total = (cur.morning||0)+(cur.evening||0);
-                            return <tr key={emp.id} style={{borderBottom:"0.5px solid #f1f5f9"}}>
-                              <td style={{padding:"4px 6px",fontSize:12,fontWeight:"700"}}>{emp.name}</td>
-                              <StepCell empId={emp.id} field="morning" cur={cur}/>
-                              <StepCell empId={emp.id} field="evening" cur={cur}/>
-                              <td style={{textAlign:"center",fontSize:13,fontWeight:"700",color:"#334155"}}>{total}</td>
-                            </tr>;
-                          })
-                        ])}
-                      </tbody>
-                    </table>
-                    <button style={{...S.btnSm("#94a3b8")}} onClick={()=>{setWeekBudget(null);try{localStorage.removeItem("pharmacy_week_budget");}catch{}showToast("אופס לברירת מחדל ✓");}}>אפס לברירת מחדל</button>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 110px 110px 50px",alignItems:"center",paddingBottom:10,borderBottom:"1.5px solid #e2e8f0",marginBottom:6}}>
+                      <span style={{...hdrStyle,textAlign:"right"}}>עובד</span>
+                      <span style={hdrStyle}>בוקר</span>
+                      <span style={hdrStyle}>ערב</span>
+                      <span style={hdrStyle}>סה״כ</span>
+                    </div>
+                    {["רוקח","פרח"].map(role=><div key={role}>
+                      <div style={{fontSize:11,fontWeight:"500",color:role==="רוקח"?"#0369a1":"#15803d",margin:"10px 0 6px"}}>{role==="רוקח"?"💊 רוקחים":"🌿 פרחים"}</div>
+                      {employees.filter(e=>e.role===role&&(role==="פרח"||(role==="רוקח"&&["סמר","סלאם","שפא","ליאן","סג׳א","ליעד"].includes(e.name)))).map(emp=>{
+                        const cur = (weekBudget||{})[emp.id]||{morning:0,evening:0};
+                        const total = (cur.morning||0)+(cur.evening||0);
+                        return <div key={emp.id} style={{display:"grid",gridTemplateColumns:"1fr 110px 110px 50px",alignItems:"center",padding:"10px 0",borderBottom:"0.5px solid #f1f5f9"}}>
+                          <span style={{fontSize:14,fontWeight:"500",color:"#1e293b"}}>{emp.name}</span>
+                          <Stepper empId={emp.id} field="morning" cur={cur}/>
+                          <Stepper empId={emp.id} field="evening" cur={cur}/>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+                            <span style={{background:"#1D9E75",color:"#fff",borderRadius:20,fontSize:13,fontWeight:"500",padding:"4px 12px",minWidth:34,textAlign:"center"}}>{total}</span>
+                          </div>
+                        </div>;
+                      })}
+                      {role==="רוקח" && <div style={{height:1,background:"#e2e8f0",margin:"4px 0"}}/>}
+                    </div>)}
+                    <button style={{...S.btnSm("#94a3b8"),marginTop:12,width:"100%"}} onClick={()=>{setWeekBudget(null);try{localStorage.removeItem("pharmacy_week_budget");}catch{}showToast("אופס לברירת מחדל ✓");}}>↺ אפס לברירת מחדל</button>
                   </>;
                 })()}
               </div>
