@@ -3382,7 +3382,7 @@ export default function App() {
                 <div style={{fontSize:11,color:"#64748b",marginBottom:8}}>לאחר שיבוץ אוטומטי — ערכים מתעדכנים אוטומטית. ניתן לשנות ידנית ולשבץ מחדש.</div>
                 {(()=>{
                   const stepBtn = (empId, field, delta, cur) => {
-                    const updated = {...(weekBudget||{}), [empId]: {...(cur||{}), [field]: Math.max(0, ((cur||{})[field]||0) + delta)};
+                    const updated = {...(weekBudget||{}), [empId]: {...(cur||{}), [field]: Math.max(0, ((cur||{})[field]||0) + delta)}};
                     setWeekBudget(updated);
                     try{localStorage.setItem("pharmacy_week_budget",JSON.stringify(updated));}catch{}
                   };
