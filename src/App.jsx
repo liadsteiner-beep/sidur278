@@ -361,48 +361,6 @@ function useLongPress(onLongPress, onClick, ms = 500) {
 }
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
-// ── TIME EDIT MODAL ── standalone to prevent re-creation on re-render
-const TimeEditModal = function TimeEditModal({modal, onSave, onReset, onClose, formatDate}) {
-  const [st, setSt] = useState("");
-  const [en, setEn] = useState("");
-  useEffect(() => {
-    if (modal) { setSt(modal.stVal || ""); setEn(modal.enVal || ""); }
-  }, [modal?.empId, modal?.shiftId, modal?.date?.getTime?.()]);
-  if (!modal) return null;
-  return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div style={{background:"#fff",borderRadius:16,padding:24,width:"100%",maxWidth:320,boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
-        <div style={{fontWeight:"800",fontSize:15,marginBottom:2}}>⏰ שינוי שעות</div>
-        <div style={{fontSize:12,color:"#64748b",marginBottom:16}}>{modal.empName} — {formatDate(modal.date)}</div>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,direction:"ltr"}}>
-          <div style={{flex:1}}>
-            <div style={{fontSize:11,color:"#64748b",marginBottom:4,direction:"rtl",textAlign:"center"}}>סיום</div>
-            <input
-              style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 10px",width:"100%",fontSize:17,textAlign:"center",fontWeight:"700",direction:"ltr"}}
-              placeholder="16:00" maxLength={5} value={en}
-              onChange={e=>{let v=e.target.value.replace(/[^0-9:]/g,"");if(v.length===4&&!v.includes(":"))v=v.slice(0,2)+":"+v.slice(2);setEn(v);}}
-            />
-          </div>
-          <span style={{fontSize:20,color:"#94a3b8",marginTop:16}}>—</span>
-          <div style={{flex:1}}>
-            <div style={{fontSize:11,color:"#64748b",marginBottom:4,direction:"rtl",textAlign:"center"}}>התחלה</div>
-            <input
-              style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 10px",width:"100%",fontSize:17,textAlign:"center",fontWeight:"700",direction:"ltr"}}
-              placeholder="08:30" maxLength={5} value={st} autoFocus
-              onChange={e=>{let v=e.target.value.replace(/[^0-9:]/g,"");if(v.length===4&&!v.includes(":"))v=v.slice(0,2)+":"+v.slice(2);setSt(v);}}
-            />
-          </div>
-        </div>
-        <div style={{display:"flex",gap:8}}>
-          <button style={{flex:2,background:"#0ea5e9",color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:"700",cursor:"pointer"}} onClick={()=>onSave(st,en)}>שמור</button>
-          <button style={{flex:1,background:"#94a3b8",color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:"700",cursor:"pointer"}} onClick={onReset}>אפס</button>
-          <button style={{flex:1,background:"#e2e8f0",color:"#64748b",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:"700",cursor:"pointer"}} onClick={onClose}>ביטול</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function App() {
   const [view, setView]               = useState("loading");
   const [currentUser, setCurrentUser] = useState(null);
@@ -975,6 +933,41 @@ export default function App() {
         }
       }, 420);
     }
+  }
+
+  function TimeEditModalInline({modal, onSave, onReset, onClose, formatDate}) {
+    const [st, setSt] = useState(modal?.stVal || "");
+    const [en, setEn] = useState(modal?.enVal || "");
+    return (
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+        <div style={{background:"#fff",borderRadius:16,padding:24,width:"100%",maxWidth:320,boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+          <div style={{fontWeight:"800",fontSize:15,marginBottom:2}}>⏰ שינוי שעות</div>
+          <div style={{fontSize:12,color:"#64748b",marginBottom:16}}>{modal.empName} — {formatDate(modal.date)}</div>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,direction:"ltr"}}>
+            <div style={{flex:1}}>
+              <div style={{fontSize:11,color:"#64748b",marginBottom:4,direction:"rtl",textAlign:"center"}}>סיום</div>
+              <input style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 10px",width:"100%",fontSize:17,textAlign:"center",fontWeight:"700",direction:"ltr"}}
+                placeholder="16:00" maxLength={5} value={en}
+                onChange={e=>{let v=e.target.value.replace(/[^0-9:]/g,"");if(v.length===4&&!v.includes(":"))v=v.slice(0,2)+":"+v.slice(2);setEn(v);}}
+              />
+            </div>
+            <span style={{fontSize:20,color:"#94a3b8",marginTop:16}}>—</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:11,color:"#64748b",marginBottom:4,direction:"rtl",textAlign:"center"}}>התחלה</div>
+              <input style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 10px",width:"100%",fontSize:17,textAlign:"center",fontWeight:"700",direction:"ltr"}}
+                placeholder="08:30" maxLength={5} value={st} autoFocus
+                onChange={e=>{let v=e.target.value.replace(/[^0-9:]/g,"");if(v.length===4&&!v.includes(":"))v=v.slice(0,2)+":"+v.slice(2);setSt(v);}}
+              />
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button style={{flex:2,background:"#0ea5e9",color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:"700",cursor:"pointer"}} onClick={()=>onSave(st,en)}>שמור</button>
+            <button style={{flex:1,background:"#94a3b8",color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:"700",cursor:"pointer"}} onClick={onReset}>אפס</button>
+            <button style={{flex:1,background:"#e2e8f0",color:"#64748b",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:"700",cursor:"pointer"}} onClick={onClose}>ביטול</button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   function openTimeEditModal(empId, date, shiftId) {
@@ -2297,9 +2290,8 @@ export default function App() {
           <div style={{textAlign:"center",color:"#94a3b8",fontSize:11,marginTop:4}}>נשמר אוטומטית</div>
         </div>
         {changePwModal && <ChangePwModal />}
-        {timeEditModal && <TimeEditModal
+        {timeEditModal && <TimeEditModalInline
   modal={timeEditModal}
-  formatDate={formatDate}
   onSave={(st,en)=>{
     if(st) setEmpShiftNote(timeEditModal.empId,timeEditModal.date,timeEditModal.shiftId+"|st",st);
     if(en) setEmpShiftNote(timeEditModal.empId,timeEditModal.date,timeEditModal.shiftId+"|en",en);
@@ -2313,6 +2305,7 @@ export default function App() {
     showToast("שעות אופסו ✓");
   }}
   onClose={()=>setTimeEditModal(null)}
+  formatDate={formatDate}
 />}
         {showChangeModal && (
           <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={e=>{if(e.target===e.currentTarget)setShowChangeModal(false);}}>
