@@ -147,7 +147,15 @@ function autoAssign(employees, availability, fridayRota, assigned, weekDates, we
     { name: "ליעד", min: 0, max: 99 },
   ];
   function getBudget(emp) {
-    if (weekBudget && weekBudget[emp.id]) return weekBudget[emp.id];
+    if (weekBudget && weekBudget[emp.id]) {
+      const wb = weekBudget[emp.id];
+      return { 
+        min: wb.max || 0, 
+        max: wb.max || 99,
+        morning: wb.morning,
+        evening: wb.evening
+      };
+    }
     return DEFAULT_BUDGET.find(b => b.name === emp.name) || { min: 0, max: 99 };
   }
 
@@ -1140,7 +1148,27 @@ export default function App() {
     setAutoAssignSeed(newSeed);
     const result = autoAssign(employees, availability, fridayRota, {}, weekDates, weekBudget, newSeed);
     setAssigned(result);
-    setPublishedWeekStart(viewWeekKey); // עדכן שה-assigned שייך לשבוע זה
+    setPublishedWeekStart(viewWeekKey);
+    // עדכן weekBudget עם תוצאות השיבוץ
+    const newBudget = {...(weekBudget||{})};
+    employees.forEach(emp => {
+      let morning = 0, evening = 0;
+      weekDates.forEach(date => {
+        const dow = date.getDay();
+        (DAY_SHIFTS[dow]||[]).forEach(sh => {
+          const ids = result[`${dateKey(date)}_${sh.id}_${emp.role}`]||[];
+          if (ids.includes(emp.id)) {
+            if (["morning","open"].includes(sh.id)) morning++;
+            else evening++;
+          }
+        });
+      });
+      if (morning > 0 || evening > 0) {
+        newBudget[emp.id] = { morning, evening, max: morning + evening };
+      }
+    });
+    setWeekBudget(newBudget);
+    try { localStorage.setItem("pharmacy_week_budget", JSON.stringify(newBudget)); } catch {}
     setShowAutoConfirm(false);
     showToast("שיבוץ אוטומטי הושלם ✓");
   }
@@ -3351,41 +3379,52 @@ export default function App() {
             <div style={S.card}>
               <div style={{...S.card, marginBottom:12}}>
                 <div style={S.sTitle}>📊 הקצאת משמרות שבועית</div>
-                <div style={{fontSize:11,color:"#64748b",marginBottom:10}}>מינימום / מקסימום משמרות לכל רוקח השבוע. שינויים ישפיעו על השיבוץ האוטומטי.</div>
-                {employees.filter(e=>e.role==="רוקח").map(emp=>{
-                  const defaultB = [{name:"סמר",min:4,max:5},{name:"סלאם",min:4,max:4},{name:"שפא",min:2,max:2},{name:"ליאן",min:3,max:4},{name:"עדי",min:0,max:0},{name:"סג׳א",min:0,max:99},{name:"ליעד",min:0,max:99}].find(b=>b.name===emp.name)||{min:0,max:99};
-                  const cur = (weekBudget||{})[emp.id] || defaultB;
-                  return (
-                    <div key={emp.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 0",borderBottom:"0.5px solid #f1f5f9",gap:8}}>
-                      <span style={{fontSize:13,fontWeight:"700",flex:1}}>{emp.name}</span>
-                      <div style={{display:"flex",alignItems:"center",gap:4}}>
-                        <span style={{fontSize:11,color:"#94a3b8"}}>מינ׳</span>
-                        <input type="number" min="0" max="7"
-                          style={{width:44,fontSize:13,padding:"3px 6px",border:"1.5px solid #e2e8f0",borderRadius:7,textAlign:"center",fontWeight:"700"}}
-                          value={cur.min}
-                          onChange={e=>{
-                            const v=parseInt(e.target.value)||0;
-                            const updated={...(weekBudget||{}),[emp.id]:{...cur,min:v}};
-                            setWeekBudget(updated);
-                            try{localStorage.setItem("pharmacy_week_budget",JSON.stringify(updated));}catch{}
-                          }}
-                        />
-                        <span style={{fontSize:11,color:"#94a3b8"}}>מקס׳</span>
-                        <input type="number" min="0" max="7"
-                          style={{width:44,fontSize:13,padding:"3px 6px",border:"1.5px solid #e2e8f0",borderRadius:7,textAlign:"center",fontWeight:"700"}}
-                          value={cur.max===99?7:cur.max}
-                          onChange={e=>{
-                            const v=parseInt(e.target.value)||0;
-                            const updated={...(weekBudget||{}),[emp.id]:{...cur,max:v===7?99:v}};
-                            setWeekBudget(updated);
-                            try{localStorage.setItem("pharmacy_week_budget",JSON.stringify(updated));}catch{}
-                          }}
-                        />
+                <div style={{fontSize:11,color:"#64748b",marginBottom:8}}>לאחר שיבוץ אוטומטי — ערכים מתעדכנים אוטומטית. ניתן לשנות ידנית ולשבץ מחדש.</div>
+                {(()=>{
+                  const stepBtn = (empId, field, delta, cur) => {
+                    const updated = {...(weekBudget||{}), [empId]: {...(cur||{}), [field]: Math.max(0, ((cur||{})[field]||0) + delta)};
+                    setWeekBudget(updated);
+                    try{localStorage.setItem("pharmacy_week_budget",JSON.stringify(updated));}catch{}
+                  };
+                  const StepCell = ({empId, field, cur}) => {
+                    const val = (cur||{})[field]||0;
+                    return <td style={{textAlign:"center",padding:"4px 2px"}}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+                        <button onClick={()=>stepBtn(empId,field,-1,cur)} style={{width:20,height:20,borderRadius:"50%",border:"0.5px solid #e2e8f0",background:"#f8fafc",fontSize:14,cursor:"pointer",lineHeight:1,padding:0}}>−</button>
+                        <span style={{fontSize:13,fontWeight:"700",minWidth:16,textAlign:"center"}}>{val}</span>
+                        <button onClick={()=>stepBtn(empId,field,1,cur)} style={{width:20,height:20,borderRadius:"50%",border:"0.5px solid #e2e8f0",background:"#f8fafc",fontSize:14,cursor:"pointer",lineHeight:1,padding:0}}>+</button>
                       </div>
-                    </div>
-                  );
-                })}
-                <button style={{...S.btnSm("#94a3b8"),marginTop:8}} onClick={()=>{setWeekBudget(null);try{localStorage.removeItem("pharmacy_week_budget");}catch{}showToast("אופס לברירת מחדל ✓");}}>אפס לברירת מחדל</button>
+                    </td>;
+                  };
+                  return <>
+                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,marginBottom:8}}>
+                      <thead>
+                        <tr style={{background:"#f8fafc"}}>
+                          <th style={{padding:"5px 6px",textAlign:"right",fontWeight:"700",color:"#475569",borderBottom:"0.5px solid #e2e8f0"}}>עובד</th>
+                          <th style={{padding:"5px 4px",textAlign:"center",fontWeight:"700",color:"#475569",borderBottom:"0.5px solid #e2e8f0"}}>☀️ בוקר</th>
+                          <th style={{padding:"5px 4px",textAlign:"center",fontWeight:"700",color:"#475569",borderBottom:"0.5px solid #e2e8f0"}}>🌙 ערב</th>
+                          <th style={{padding:"5px 4px",textAlign:"center",fontWeight:"700",color:"#475569",borderBottom:"0.5px solid #e2e8f0"}}>סה״כ</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {["רוקח","פרח"].map(role=>[
+                          <tr key={role+"-header"}><td colSpan={4} style={{padding:"6px 6px 2px",fontSize:11,fontWeight:"700",color:role==="רוקח"?"#0369a1":"#15803d",background:role==="רוקח"?"#e0f2fe":"#f0fdf4"}}>{role==="רוקח"?"💊 רוקחים":"🌿 פרחים"}</td></tr>,
+                          ...employees.filter(e=>e.role===role&&((weekBudget||{})[e.id]?.max||0)!==0||(role==="פרח")||(role==="רוקח"&&["סמר","סלאם","שפא","ליאן","סג׳א","ליעד"].includes(e.name))).map(emp=>{
+                            const cur = (weekBudget||{})[emp.id]||{morning:0,evening:0,max:0};
+                            const total = (cur.morning||0)+(cur.evening||0);
+                            return <tr key={emp.id} style={{borderBottom:"0.5px solid #f1f5f9"}}>
+                              <td style={{padding:"4px 6px",fontSize:12,fontWeight:"700"}}>{emp.name}</td>
+                              <StepCell empId={emp.id} field="morning" cur={cur}/>
+                              <StepCell empId={emp.id} field="evening" cur={cur}/>
+                              <td style={{textAlign:"center",fontSize:13,fontWeight:"700",color:"#334155"}}>{total}</td>
+                            </tr>;
+                          })
+                        ])}
+                      </tbody>
+                    </table>
+                    <button style={{...S.btnSm("#94a3b8")}} onClick={()=>{setWeekBudget(null);try{localStorage.removeItem("pharmacy_week_budget");}catch{}showToast("אופס לברירת מחדל ✓");}}>אפס לברירת מחדל</button>
+                  </>;
+                })()}
               </div>
 
               <div style={S.sTitle}>⏰ נעילת שיבוץ</div>
