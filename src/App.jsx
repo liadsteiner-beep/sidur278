@@ -1752,12 +1752,12 @@ export default function App() {
                               const n=getEmpShiftNote(id,date,sh.id);
                               const customTime=getEmpShiftTime(id,date,sh.id);
                               const isHarish=n&&n.includes("חריש בעיר");
-                              const isDept=n&&["קוסמטיקה","מחלקה כללית",'אחמ"ש'].some(d=>n.includes(d));
-                              const bg = isMe?(isPast?"#bfdbfe":"#dbeafe"):isHarish?"#fdf2f4":isDept?"#fdf4e7":"transparent";
+                              const empNote = empNotes[id]||"";
+                              const isDept=["קוסמטיקה","מחלקה כללית",'אחמ"ש'].some(d=>empNote.includes(d)||(n&&n.includes(d)));
+                              const bg = isMe?(isPast?"#bfdbfe":"#dbeafe"):isHarish?"#fdf2f4":isDept?"#fef3c7":"transparent";
                               const clr = isMe?"#1d4ed8":isHarish?"#8b2a3a":isDept?"#92400e":"#1e293b";
                               const noteClr = isHarish?"#8b2a3a":isDept?"#92400e":"#334155";
-                              const borderClr = isHarish?"#f0b8c0":isDept?"#fcd34d":"#e2e8f0";
-                              return <div key={id} style={{padding:"2px 3px",borderRadius:4,background:bg,marginBottom:2,opacity:isPast?0.7:1,border:isDept?`1.5px solid #fcd34d`:"none"}}>
+                              return <div key={id} style={{padding:"2px 3px",borderRadius:4,background:bg,marginBottom:2,opacity:isPast?0.7:1}}>
                                 <span style={{fontSize:14,fontWeight:isMe?"800":"700",color:clr,display:"block"}}>{emp?.name}{isMe?" ⭐":""}</span>
                                 <span style={{fontSize:11,color:noteClr,fontWeight:(isHarish||isDept)?"700":"600",display:"block",whiteSpace:"nowrap"}}>{customTime||getShiftTime(sh,role)}{label?` ${label}`:""}</span>
                                 {n&&<span style={{fontSize:11,color:noteClr,fontStyle:"italic",fontWeight:"600",display:"block",borderTop:`0.5px solid ${borderClr}`,marginTop:1,paddingTop:1,whiteSpace:"nowrap"}}>{n}</span>}
@@ -1795,10 +1795,11 @@ export default function App() {
                               const n=getEmpShiftNote(id,date,sh.id);
                               const customTime=getEmpShiftTime(id,date,sh.id);
                               const isHarish=n&&n.includes("חריש בעיר");
-                              return <div key={id} style={{padding:"2px 3px",borderRadius:4,background:isMe?(isPast?"#bfdbfe":"#dbeafe"):isHarish?"#fdf2f4":"transparent",marginBottom:2,opacity:isPast?0.7:1}}>
-                                <span style={{fontSize:14,fontWeight:isMe?"800":"700",color:isMe?"#1d4ed8":isHarish?"#8b2a3a":"#1e293b",display:"block"}}>{emp?.name}{isMe?" ⭐":""}</span>
-                                <span style={{fontSize:11,color:isHarish?"#8b2a3a":"#334155",fontWeight:isHarish?"700":"600",display:"block",whiteSpace:"nowrap"}}>{customTime||getShiftTime(sh,role)}</span>
-                                {n&&<span style={{fontSize:11,color:isHarish?"#8b2a3a":"#334155",fontStyle:"italic",fontWeight:"600",display:"block",borderTop:`0.5px solid ${isHarish?"#f0b8c0":"#e2e8f0"}`,marginTop:1,paddingTop:1}}>{n}</span>}
+                              const isDept=["קוסמטיקה","מחלקה כללית",'אחמ"ש'].some(d=>(empNotes[id]||"").includes(d)||(n&&n.includes(d)));
+                              return <div key={id} style={{padding:"2px 3px",borderRadius:4,background:isMe?(isPast?"#bfdbfe":"#dbeafe"):isHarish?"#fdf2f4":isDept?"#fef3c7":"transparent",marginBottom:2,opacity:isPast?0.7:1}}>
+                                <span style={{fontSize:14,fontWeight:isMe?"800":"700",color:isMe?"#1d4ed8":isHarish?"#8b2a3a":isDept?"#92400e":"#1e293b",display:"block"}}>{emp?.name}{isMe?" ⭐":""}</span>
+                                <span style={{fontSize:11,color:isHarish?"#8b2a3a":isDept?"#92400e":"#334155",fontWeight:(isHarish||isDept)?"700":"600",display:"block",whiteSpace:"nowrap"}}>{customTime||getShiftTime(sh,role)}</span>
+                                {n&&<span style={{fontSize:11,color:isHarish?"#8b2a3a":isDept?"#92400e":"#334155",fontStyle:"italic",fontWeight:"600",display:"block",borderTop:`0.5px solid ${isHarish?"#f0b8c0":"#e2e8f0"}`,marginTop:1,paddingTop:1}}>{n}</span>}
                               </div>;
                             })}
                             {!allEmps.length&&<span style={{color:"#e2e8f0",fontSize:10,display:"block",textAlign:"center"}}>—</span>}
