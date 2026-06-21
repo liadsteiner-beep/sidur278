@@ -2516,11 +2516,7 @@ export default function App() {
               .sim-emp.dim { opacity:0.18; }
               .sim-scroll { overflow-x:auto; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.08); touch-action:pan-x pan-y pinch-zoom; direction:ltr; }
             `}</style>
-            <div style={{fontSize:11,color:"#64748b",marginBottom:6,display:"flex",alignItems:"center",gap:8,background:"#f8fafc",border:"0.5px solid #e2e8f0",borderRadius:8,padding:"6px 10px"}}>
-              <span style={{fontSize:13}}>👆</span>
-              <span>לחצי לחיצה בודדת להדגשה • לחיצה כפולה לעריכת שעות</span>
-              {hoveredEmp && <button style={{marginRight:"auto",padding:"2px 8px",border:"0.5px solid #e2e8f0",borderRadius:6,background:"#fff",fontSize:11,color:"#64748b",cursor:"pointer"}} onClick={()=>setHoveredEmp(null)}>ניקוי</button>}
-            </div>
+            
             <div className="sim-scroll" style={{direction:"ltr"}}>
               <table style={{borderCollapse:"collapse",fontSize:13,minWidth:520,background:"#fff",direction:"rtl"}}>
                 <thead>
