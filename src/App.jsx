@@ -2717,7 +2717,7 @@ export default function App() {
 
             <div
               id="assign-table-wrap"
-              style={{overflow:"hidden",marginBottom:12,touchAction:"pinch-zoom"}}
+              style={{overflow:"hidden",marginBottom:12}}
               onWheel={e=>{
                 if(e.ctrlKey){
                   e.preventDefault();
@@ -2824,7 +2824,6 @@ export default function App() {
                                           pressFiredRef.current=false;
                                         }}
                                         onTouchStart={(e)=>{
-                                          e.preventDefault();
                                           pressFiredRef.current=false;
                                           pressTimerRef.current=setTimeout(()=>{
                                             pressFiredRef.current=true;
@@ -2833,9 +2832,8 @@ export default function App() {
                                           }, 600);
                                         }}
                                         onTouchEnd={(e)=>{
-                                          e.preventDefault();
                                           if(pressTimerRef.current){clearTimeout(pressTimerRef.current);pressTimerRef.current=null;}
-                                          if(!pressFiredRef.current) toggleAssign(date,shift.id,role,id);
+                                          if(!pressFiredRef.current) { e.preventDefault(); toggleAssign(date,shift.id,role,id); }
                                           pressFiredRef.current=false;
                                         }}
                                         style={{borderRadius:"6px",padding:"3px 5px",fontSize:11,fontWeight:"700",color:"#14532d",cursor:"grab",width:"100%",transition:"all 0.15s",background:"#dcfce7",border:`2px solid ${isAv(id,date,shift.id)?"#22c55e":"#f59e0b"}`,userSelect:"none"}}>
@@ -2872,8 +2870,9 @@ export default function App() {
                                         onDrop={e=>{ e.preventDefault(); handleDrop(date,shift.id,role,emp.id); }}
                                         className="emp-btn emp-avail"
                                         onClick={()=>toggleAssign(date,shift.id,role,emp.id)}
+                                        title={empNotes[emp.id] ? empNotes[emp.id] : undefined}
                                         style={{borderRadius:"6px",padding:"3px 5px",fontSize:10,fontWeight:"500",color:"#1e40af",cursor:"pointer",flex:1,transition:"all 0.15s",background:"#dbeafe",border:"1px dashed #3b82f6"}}>
-                                        + {emp.name}
+                                        + {emp.name}{empNotes[emp.id] ? " 💬" : ""}
                                       </button>
                                       <button
                                         onClick={e=>{
@@ -3478,7 +3477,49 @@ export default function App() {
       </div>
 
       {changePwModal && <ChangePwModal />}
-      
+
+      {timeEditModal && (()=>{
+        const m = timeEditModal;
+        return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={e=>{if(e.target===e.currentTarget)setTimeEditModal(null);}}>
+          <div style={{background:"#fff",borderRadius:16,padding:24,width:"100%",maxWidth:320,boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+            <div style={{fontWeight:"800",fontSize:15,marginBottom:2}}>⏰ שינוי שעות</div>
+            <div style={{fontSize:12,color:"#64748b",marginBottom:16}}>{m.empName} — {formatDate(m.date)}</div>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,direction:"ltr"}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:11,color:"#64748b",marginBottom:4,direction:"rtl",textAlign:"center"}}>סיום</div>
+                <input style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 10px",width:"100%",fontSize:17,textAlign:"center",fontWeight:"700",direction:"ltr"}}
+                  placeholder="16:00" maxLength={5} defaultValue={m.enVal||""}
+                  onChange={e=>{let v=e.target.value.replace(/[^0-9:]/g,"");if(v.length===4&&!v.includes(":"))v=v.slice(0,2)+":"+v.slice(2);setTimeEditModal(prev=>({...prev,_en:v}));}}
+                />
+              </div>
+              <span style={{fontSize:20,color:"#94a3b8",marginTop:16}}>—</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:11,color:"#64748b",marginBottom:4,direction:"rtl",textAlign:"center"}}>התחלה</div>
+                <input style={{border:"1.5px solid #e2e8f0",borderRadius:8,padding:"8px 10px",width:"100%",fontSize:17,textAlign:"center",fontWeight:"700",direction:"ltr"}}
+                  placeholder="08:30" maxLength={5} defaultValue={m.stVal||""} autoFocus
+                  onChange={e=>{let v=e.target.value.replace(/[^0-9:]/g,"");if(v.length===4&&!v.includes(":"))v=v.slice(0,2)+":"+v.slice(2);setTimeEditModal(prev=>({...prev,_st:v}));}}
+                />
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button style={{flex:2,background:"#0ea5e9",color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:"700",cursor:"pointer"}} onClick={()=>{
+                const st=m._st!==undefined?m._st:m.stVal||"";
+                const en=m._en!==undefined?m._en:m.enVal||"";
+                if(st) setEmpShiftNote(m.empId,m.date,m.shiftId+"|st",st);
+                if(en) setEmpShiftNote(m.empId,m.date,m.shiftId+"|en",en);
+                setTimeEditModal(null);showToast("שעות עודכנו ✓");
+              }}>שמור</button>
+              <button style={{flex:1,background:"#94a3b8",color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:"700",cursor:"pointer"}} onClick={()=>{
+                setEmpShiftNote(m.empId,m.date,m.shiftId+"|st","");
+                setEmpShiftNote(m.empId,m.date,m.shiftId+"|en","");
+                setTimeEditModal(null);showToast("שעות אופסו ✓");
+              }}>אפס</button>
+              <button style={{flex:1,background:"#e2e8f0",color:"#64748b",border:"none",borderRadius:10,padding:"10px 16px",fontSize:13,fontWeight:"700",cursor:"pointer"}} onClick={()=>setTimeEditModal(null)}>ביטול</button>
+            </div>
+          </div>
+        </div>;
+      })()}
+
       {toast && <div className="toast-anim" style={S.toast(toast.type)}>{toast.msg}</div>}
     </div>
   );
