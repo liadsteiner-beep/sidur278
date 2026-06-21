@@ -1394,8 +1394,9 @@ export default function App() {
   if (!fbLoaded) return (
     <div style={{minHeight:"100vh",background:"#1e293b",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"'Segoe UI',Tahoma,sans-serif"}}>
       <div style={{fontSize:52,marginBottom:16}}>💊</div>
-      <div style={{color:"#38bdf8",fontWeight:"800",fontSize:18,marginBottom:8}}>{APP_NAME}</div>
-      <div style={{color:"#64748b",fontSize:14}}>טוען נתונים...</div>
+      <div style={{color:"#38bdf8",fontWeight:"800",fontSize:18,marginBottom:16}}>{APP_NAME}</div>
+      <div><span className="loader-dot"/><span className="loader-dot"/><span className="loader-dot"/></div>
+      <style>{`.loader-dot{width:9px;height:9px;border-radius:50%;background:#38bdf8;display:inline-block;margin:0 3px;animation:dotBounce 1.2s infinite}.loader-dot:nth-child(2){animation-delay:.2s}.loader-dot:nth-child(3){animation-delay:.4s}@keyframes dotBounce{0%,80%,100%{transform:scale(.8);opacity:.5}40%{transform:scale(1.2);opacity:1}}`}</style>
     </div>
   );
 
@@ -1483,7 +1484,7 @@ export default function App() {
           )}
         </div>
       </div>
-      {toast && <div style={S.toast(toast.type)}>{toast.msg}</div>}
+      {toast && <div className="toast-anim" style={S.toast(toast.type)}>{toast.msg}</div>}
     </div>
   );
 
@@ -2381,7 +2382,7 @@ export default function App() {
             </div>
           </div>
         )}
-        {toast && <div style={S.toast(toast.type)}>{toast.msg}</div>}
+        {toast && <div className="toast-anim" style={S.toast(toast.type)}>{toast.msg}</div>}
       </div>
     );
   }
@@ -2396,6 +2397,16 @@ export default function App() {
         [data-empid].emp-hov button.emp-assigned { background: #16a34a !important; border-color: #14532d !important; color: #fff !important; font-weight: 700 !important; font-size: 13px !important; }
         [data-empid].emp-hov button.emp-avail { background: #2563eb !important; border-color: #1e3a8a !important; color: #fff !important; font-weight: 500 !important; font-size: 12px !important; }
         .emp-hovering [data-empid]:not(.emp-hov) button.emp-nonavail { display: none !important; }
+        @keyframes fadeSlideIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes popIn { 0% { transform:scale(0.8); } 60% { transform:scale(1.1); } 100% { transform:scale(1); } }
+        @keyframes toastIn { from { opacity:0; transform:translate(-50%,10px); } to { opacity:1; transform:translate(-50%,0); } }
+        @keyframes dotBounce { 0%,80%,100% { transform:scale(0.8); opacity:0.5; } 40% { transform:scale(1.2); opacity:1; } }
+        .tab-panel-anim { animation: fadeSlideIn 0.22s ease; }
+        button.emp-btn.emp-assigned { animation: popIn 0.28s cubic-bezier(0.34,1.56,0.64,1); }
+        .toast-anim { animation: toastIn 0.25s ease; }
+        .loader-dot { width:9px; height:9px; border-radius:50%; background:#1D9E75; display:inline-block; margin:0 3px; animation: dotBounce 1.2s infinite; }
+        .loader-dot:nth-child(2) { animation-delay:0.2s; }
+        .loader-dot:nth-child(3) { animation-delay:0.4s; }
       `}</style>
       <div style={S.header}>
         <div style={S.logo}>{APP_NAME} — מנהל/ת</div>
@@ -2435,7 +2446,7 @@ export default function App() {
 
         {/* ── SIMULATION TAB ── */}
         {managerTab==="simulation" && (
-          <div>
+          <div key="simulation" className="tab-panel-anim">
             {(() => {
               const today = new Date();
               const todayKey = dateKey(today);
@@ -2681,7 +2692,7 @@ export default function App() {
 
         {/* ── ASSIGN TAB ── */}
         {managerTab==="assign" && (
-          <div>
+          <div key="assign" className="tab-panel-anim">
             {!published && Object.keys(empNotes).filter(k=>!k.startsWith("feedback_")&&empNotes[k]).length>0 && (
               <div style={{background:"#fef3c7",border:"1.5px solid #fcd34d",borderRadius:10,padding:"10px 14px",marginBottom:10,cursor:"pointer",display:"flex",alignItems:"center",gap:8}} onClick={()=>setManagerTab("notes")}>
                 <span style={{fontSize:18}}>📝</span>
@@ -2908,7 +2919,7 @@ export default function App() {
 
         {/* ── PUBLISH TAB ── */}
         {managerTab==="publish" && (
-          <div>
+          <div key="publish" className="tab-panel-anim">
             {notSubmitted().length>0 && (
               <div style={S.alertCard}>
                 <div style={{fontWeight:"800",color:"#dc2626",marginBottom:8}}>⚠️ טרם השתבצו ({notSubmitted().length})</div>
@@ -2988,7 +2999,7 @@ export default function App() {
         )}
 
         {managerTab==="notes" && (
-          <div>
+          <div key="notes" className="tab-panel-anim">
             <div style={{color:"#64748b",fontSize:12,marginBottom:12}}>הערות שהוכנסו על ידי העובדים:</div>
             {employees.map(emp=>{
               const note=empNotes[emp.id];
@@ -3036,7 +3047,7 @@ export default function App() {
         )}
 
         {managerTab==="vacations" && (
-          <div>
+          <div key="vacations" className="tab-panel-anim">
             <div style={{...S.card, marginBottom:16}}>
               <div style={S.sTitle}>➕ הוסף חופשה ידנית</div>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -3272,7 +3283,7 @@ export default function App() {
         })()}
 
         {managerTab==="settings" && (
-          <div>
+          <div key="settings" className="tab-panel-anim">
             <div style={S.card}>
               <div style={S.sTitle}>📅 תורנויות שישי</div>
               {fridayRota.length>0 && (
@@ -3440,7 +3451,7 @@ export default function App() {
 
       {changePwModal && <ChangePwModal />}
       
-      {toast && <div style={S.toast(toast.type)}>{toast.msg}</div>}
+      {toast && <div className="toast-anim" style={S.toast(toast.type)}>{toast.msg}</div>}
     </div>
   );
 
