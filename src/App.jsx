@@ -430,7 +430,8 @@ export default function App() {
   const [fridayRota, setFridayRota]   = useState([]);
   const [published, setPublished]     = useState(false);
   const [publishedWeekStart, setPublishedWeekStart] = useState(null);
-  const [publishedAssigned, setPublishedAssigned] = useState({}); // legacy
+  const [publishedAssigned, setPublishedAssigned] = useState({});
+  const [publishedAt, setPublishedAt] = useState(null); // legacy
   const [publishedByWeek, setPublishedByWeek] = useState({});     // weekStart -> assigned
   const [toast, setToast]             = useState(null);
   const [managerTab, setManagerTab]   = useState("assign");
@@ -2392,7 +2393,7 @@ export default function App() {
 
   // ════════════ MANAGER ════════════
   const missing = getMissingSlots();
-  const tabs = [["simulation","📊 סימולציה"],["assign","✏️ שיבוץ"],["publish","📤 פרסום"],["notes","📝 הערות"],["feedback","💡 משוב"],["vacations","🌴 חופשות"],["duty","⭐ תורנות שישי"],["settings","⚙️ הגדרות"]];
+  const tabs = [["simulation","📊 סימולציה"],["assign","✏️ שיבוץ"],["publish","📤 פרסום"],["notes","📝 הערות"],["vacations","🌴 חופשות"],["duty","⭐ תורנות שישי"],["settings","⚙️ הגדרות"]];
 
   return (
     <div style={S.app}>
@@ -2686,6 +2687,15 @@ export default function App() {
         {/* ── ASSIGN TAB ── */}
         {managerTab==="assign" && (
           <div>
+            {!published && Object.keys(empNotes).filter(k=>!k.startsWith("feedback_")&&empNotes[k]).length>0 && (
+              <div style={{background:"#fef3c7",border:"1.5px solid #fcd34d",borderRadius:10,padding:"10px 14px",marginBottom:10,cursor:"pointer",display:"flex",alignItems:"center",gap:8}} onClick={()=>setManagerTab("notes")}>
+                <span style={{fontSize:18}}>📝</span>
+                <div>
+                  <div style={{fontWeight:"700",color:"#92400e",fontSize:13}}>יש הערות עובדים שטרם נקראו</div>
+                  <div style={{fontSize:11,color:"#b45309"}}>לחצי לצפייה בטאב הערות ←</div>
+                </div>
+              </div>
+            )}
             <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
               <button style={S.btn("#7e22ce")} onClick={()=>setShowAutoConfirm(true)}>⚡ שיבוץ אוטומטי</button>
               <button style={S.btn("#f59e0b")} onClick={()=>{if(window.confirm("לאפס שיבוצים בלבד (ללא זמינויות)?")) {setAssigned({});showToast("שיבוצים אופסו ✓");}}}>🗑️ אפס שיבוצים</button>
@@ -2703,7 +2713,7 @@ export default function App() {
               </div>
             )}
 
-            <div style={{overflowX:"auto",marginBottom:12}}>
+            <div style={{overflowX:"auto",overflowY:"auto",maxHeight:"calc(100vh - 280px)",marginBottom:12}}>
               <table id="assign-table" style={{width:"100%",borderCollapse:"collapse",fontSize:12,background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.08)",minWidth:500}}>
                 <thead>
                   <tr style={{background:"#1e293b",color:"#f8fafc"}}>
@@ -2916,46 +2926,41 @@ export default function App() {
             <div style={S.card}>
               <div style={S.sTitle}>📤 שלח סידור</div>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                <button style={{...S.btn(published?"#22c55e":"#0ea5e9"),padding:12,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={async()=>{
-                  // טען מ-Firebase ישירות לפני פרסום
-                  const snap = await getDoc(doc(db,"pharmacy","schedule"));
-                  const freshAssigned = snap.exists() ? (snap.data().assigned || assigned) : assigned;
-                  const pubWeekStart = dateKey(weekDates[0]);
-                  setAssigned(freshAssigned);
-                  setPublished(true);
-                  setPublishedWeekStart(pubWeekStart);
-                  setPublishedAssigned({...freshAssigned});
-                  const updated = {...publishedByWeek, [pubWeekStart]: freshAssigned};
-                  setPublishedByWeek(updated);
-                  setDoc(doc(db,"pharmacy","schedule"), {
-                    published: true,
-                    publishedWeekStart: pubWeekStart,
-                    publishedAssigned: freshAssigned,
-                    publishedByWeek: updated,
-                    assigned: freshAssigned
-                  }, {merge:true}).catch(()=>{});
-                  showToast("פורסם ✓");
-                  showToast("פורסם ✓");
-                }}>
-                  {published?"✓ פורסם באפליקציה":"✅ פרסם באפליקציה לעובדים"}
-                </button>
+                {currentWeekPublished ? (
+                  <div style={{background:"#f0fdf4",border:"1.5px solid #86efac",borderRadius:10,padding:"12px 16px",display:"flex",alignItems:"center",gap:10}}>
+                    <span style={{fontSize:20}}>✅</span>
+                    <div>
+                      <div style={{fontWeight:"700",color:"#15803d",fontSize:14}}>פורסם!</div>
+                      {publishedAt && <div style={{fontSize:11,color:"#16a34a"}}>{new Date(publishedAt).toLocaleDateString("he-IL")} בשעה {new Date(publishedAt).toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"})}</div>}
+                    </div>
+                  </div>
+                ) : (
+                  <button style={{...S.btn("#0ea5e9"),padding:12,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",gap:6}} onClick={async()=>{
+                    const snap = await getDoc(doc(db,"pharmacy","schedule"));
+                    const freshAssigned = snap.exists() ? (snap.data().assigned || assigned) : assigned;
+                    const pubWeekStart = dateKey(weekDates[0]);
+                    setAssigned(freshAssigned);
+                    setPublished(true);
+                    setPublishedWeekStart(pubWeekStart);
+                    setPublishedAssigned({...freshAssigned});
+                    const updated = {...publishedByWeek, [pubWeekStart]: freshAssigned};
+                    setPublishedByWeek(updated);
+                    const now = new Date().toISOString();
+                    setPublishedAt(now);
+                    setDoc(doc(db,"pharmacy","schedule"), {
+                      published: true,
+                      publishedWeekStart: pubWeekStart,
+                      publishedAssigned: freshAssigned,
+                      publishedByWeek: updated,
+                      assigned: freshAssigned,
+                      publishedAt: now
+                    }, {merge:true}).catch(()=>{});
+                    showToast("פורסם ✓");
+                  }}>
+                    ✅ פרסם באפליקציה לעובדים
+                  </button>
+                )}
                 <div style={{display:"flex",gap:8}}>
-                  <button style={{flex:1,...S.btn("#085041"),padding:12,fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}
-                    onClick={async()=>{
-                      const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
-                      const container = document.createElement("div");
-                      container.style.cssText="position:absolute;top:0;left:-9999px;width:1584px;background:#fff;font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl;";
-                      container.innerHTML = buildImageHTML();
-                      document.body.appendChild(container);
-                      await new Promise(r=>setTimeout(r,200));
-                      const canvas = await h2c(container,{scale:2,useCORS:true,backgroundColor:"#fff",width:1584,windowWidth:1584});
-                      document.body.removeChild(container);
-                      const link = document.createElement("a");
-                      link.download = `סידור ${formatDateShort(weekDates[0])}-${formatDateShort(weekDates[6])}.png`;
-                      link.href = canvas.toDataURL("image/png");
-                      link.click();
-                      showToast("הסידור נשמר כתמונה ✓");
-                    }}>⬇️ הורד סידור</button>
                   <button style={{flex:1,...S.btn("#25D366"),padding:12,fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}
                     onClick={async()=>{
                       const {default:h2c} = await import("https://esm.sh/html2canvas@1.4.1");
