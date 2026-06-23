@@ -1369,7 +1369,7 @@ export default function App() {
     badge:  (role)=>({ background:ROLE_COLORS[role]?.light||"#f1f5f9", color:ROLE_COLORS[role]?.dark||"#334155", border:`1px solid ${ROLE_COLORS[role]?.bg||"#cbd5e1"}`, borderRadius:"20px", padding:"3px 10px", fontSize:"13px", fontWeight:"700", display:"inline-block" }),
     chip:   (a)=>({ border:`2px solid ${a?"#0ea5e9":"#e2e8f0"}`, background:a?"#e0f2fe":"#f8fafc", color:a?"#0369a1":"#64748b", borderRadius:"9px", padding:"8px 14px", fontWeight:"700", fontSize:"13px", cursor:"pointer", userSelect:"none" }),
     empChip:(a,dim)=>({ border:`2px solid ${a?"#22c55e":"#0ea5e9"}`, background:a?"#dcfce7":"#eff6ff", color:a?"#15803d":"#1d4ed8", borderRadius:"9px", padding:"6px 12px", fontWeight:"700", fontSize:"13px", cursor:"pointer", userSelect:"none", opacity:dim?0.35:1 }),
-    toast:  (type)=>({ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:type==="err"?"#ef4444":"#22c55e", color:"#fff", padding:"12px 24px", borderRadius:"12px", fontWeight:"700", fontSize:"15px", zIndex:9999, boxShadow:"0 4px 20px rgba(0,0,0,0.2)", whiteSpace:"nowrap" }),
+    toast:  (type)=>({ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:type==="err"?"#ef4444":type==="warn"?"#f59e0b":"#22c55e", color:"#fff", padding:"12px 24px", borderRadius:"12px", fontWeight:"700", fontSize:"15px", zIndex:9999, boxShadow:"0 4px 20px rgba(0,0,0,0.2)", whiteSpace:"nowrap" }),
     sTitle: { fontWeight:"800", fontSize:"15px", color:"#334155", marginBottom:10 },
   };
 
@@ -3009,6 +3009,7 @@ export default function App() {
                       publishedAt: now
                     }, {merge:true}).catch(()=>{});
                     showToast("פורסם ✓");
+                    setTimeout(()=>showToast("📥 אל תשכחי להוריד גיבוי!","warn"), 2500);
                   }}>
                     ✅ פרסם באפליקציה לעובדים
                   </button>
