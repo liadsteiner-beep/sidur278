@@ -430,7 +430,8 @@ export default function App() {
   const currentRealWeekDates = getWeekDates(0);
   const nextWeekDates = getWeekDates(1);
   const nextWeekStart = dateKey(nextWeekDates[0]);
-  const nextWeekPublished = published && publishedWeekStart === nextWeekStart;
+  const nextWeekPublished = (published && publishedWeekStart === nextWeekStart) ||
+    !!(publishedByWeek[nextWeekStart] && Object.keys(publishedByWeek[nextWeekStart]).length > 0);
   // האם הסידור פורסם לשבוע הנוכחי שהעובד רואה
   const currentViewWeekStart = dateKey(weekDates[0]);
   const currentWeekPublished = !!(publishedByWeek[currentViewWeekStart] && Object.keys(publishedByWeek[currentViewWeekStart]).length > 0) ||
@@ -1037,9 +1038,20 @@ export default function App() {
   const viewWeekKey = dateKey(weekDates[0]);
   const publishedWeekKey = publishedWeekStart || "";
   
-  // getAssigned — תמיד מ-assigned הנוכחי
-  // publishedByWeek משמש רק לצפייה בסידורים ישנים בלשונית סימולציה
+  // getAssigned — תמיד מ-assigned הנוכחי (למנהלת)
   const getAssigned = (date,shiftId,role) => assigned[aKey(date,shiftId,role)]||[];
+
+  // getPublishedAssigned — לעובדים: קורא רק מסידורים שפורסמו
+  const getPublishedAssigned = (date,shiftId,role) => {
+    const wk = dateKey(date.getDay()===0 ? date : (() => { const d=new Date(date); d.setDate(d.getDate()-((d.getDay()+6)%7)); return d; })());
+    // חפש ב-publishedByWeek לפי שבוע התאריך
+    const weekStart = (() => { const d=new Date(date); d.setDate(d.getDate()-((d.getDay()+6)%7)); return dateKey(d); })();
+    const pubWeek = publishedByWeek[weekStart];
+    if (pubWeek) return pubWeek[aKey(date,shiftId,role)]||[];
+    // אם זה השבוע הפורסם ב-published
+    if (publishedWeekStart === weekStart && published) return assigned[aKey(date,shiftId,role)]||[];
+    return [];
+  };
 
   const empDisplayDates = showNextWeek && nextWeekPublished ? nextWeekDates : weekDates;
 
@@ -1738,9 +1750,9 @@ export default function App() {
                         const isPast=midnight<new Date();
                         if(!ms&&!cs) return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",background:isPast?"#edf0f4":"#f8fafc",textAlign:"center",color:"#d1d5db",fontSize:10}}>—</td>;
                         const allEmps=[
-                          ...(ms?getAssigned(date,ms.id,"רוקח").map(id=>({id,sh:ms,label:ms.id==="open"&&!getEmpShiftNote(id,date,ms.id).includes("חריש בעיר")?"פתיחה":"",role:"רוקח"})):[]),
-                          ...(cs?getAssigned(date,cs.id,"רוקח").map(id=>({id,sh:cs,label:!getEmpShiftNote(id,date,cs.id).includes("חריש בעיר")?"סגירה":"",role:"רוקח"})):[]),
-                          ...(ms?getAssigned(date,ms.id,"פרח").map(id=>({id,sh:ms,role:"פרח"})):[]),
+                          ...(ms?getPublishedAssigned(date,ms.id,"רוקח").map(id=>({id,sh:ms,label:ms.id==="open"&&!getEmpShiftNote(id,date,ms.id).includes("חריש בעיר")?"פתיחה":"",role:"רוקח"})):[]),
+                          ...(cs?getPublishedAssigned(date,cs.id,"רוקח").map(id=>({id,sh:cs,label:!getEmpShiftNote(id,date,cs.id).includes("חריש בעיר")?"סגירה":"",role:"רוקח"})):[]),
+                          ...(ms?getPublishedAssigned(date,ms.id,"פרח").map(id=>({id,sh:ms,role:"פרח"})):[]),
                         ];
                         const shiftNote=ms?getShiftNote(date,ms.id):"";
                         return (
@@ -1782,8 +1794,8 @@ export default function App() {
                         const isPast=midnight<new Date();
                         if(!es) return <td key={dateKey(date)} style={{border:"0.5px solid #e2e8f0",background:isPast?"#edf0f4":"#f8fafc",textAlign:"center",color:"#d1d5db",fontSize:10}}>—</td>;
                         const allEmps=[
-                          ...getAssigned(date,es.id,"רוקח").map(id=>({id,sh:es,role:"רוקח"})),
-                          ...getAssigned(date,es.id,"פרח").map(id=>({id,sh:es,role:"פרח"})),
+                          ...getPublishedAssigned(date,es.id,"רוקח").map(id=>({id,sh:es,role:"רוקח"})),
+                          ...getPublishedAssigned(date,es.id,"פרח").map(id=>({id,sh:es,role:"פרח"})),
                         ];
                         const shiftNote=getShiftNote(date,es.id);
                         return (
@@ -1861,7 +1873,7 @@ export default function App() {
                     const myShiftsForCal = [];
                     empDisplayDates.forEach(date=>{
                       (DAY_SHIFTS[date.getDay()]||[]).forEach(sh=>{
-                        if(getAssigned(date,sh.id,currentUser.role).includes(currentUser.id)){
+                        if(getPublishedAssigned(date,sh.id,currentUser.role).includes(currentUser.id)){
                           myShiftsForCal.push({date,sh});
                         }
                       });
@@ -1900,7 +1912,7 @@ export default function App() {
                 const myShiftList = [];
                 weekDates.forEach(date=>{
                   (DAY_SHIFTS[date.getDay()]||[]).forEach(sh=>{
-                    if(getAssigned(date,sh.id,myRole).includes(currentUser.id)){
+                    if(getPublishedAssigned(date,sh.id,myRole).includes(currentUser.id)){
                       const empNote = getEmpShiftNote(currentUser.id,date,sh.id);
                       const isHarish = empNote.includes("חריש בעיר");
                       const shiftLabel = isHarish ? "בוקר" : ["morning","open"].includes(sh.id)?(sh.id==="open"?"פתיחה":"בוקר"):sh.id==="close"?"סגירה":"ערב";
@@ -2258,7 +2270,7 @@ export default function App() {
             const mySlots=[];
             weekDates.forEach(date=>{
               (DAY_SHIFTS[date.getDay()]||[]).forEach(sh=>{
-                if(getAssigned(date,sh.id,myRole).includes(currentUser.id)) mySlots.push({date,sh});
+                if(getPublishedAssigned(date,sh.id,myRole).includes(currentUser.id)) mySlots.push({date,sh});
               });
             });
             return null;
