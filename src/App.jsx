@@ -430,8 +430,7 @@ export default function App() {
   const currentRealWeekDates = getWeekDates(0);
   const nextWeekDates = getWeekDates(1);
   const nextWeekStart = dateKey(nextWeekDates[0]);
-  const nextWeekPublished = (published && publishedWeekStart === nextWeekStart) ||
-    !!(publishedByWeek[nextWeekStart] && Object.keys(publishedByWeek[nextWeekStart]).length > 0);
+  const nextWeekPublished = published && publishedWeekStart === nextWeekStart;
   // האם הסידור פורסם לשבוע הנוכחי שהעובד רואה
   const currentViewWeekStart = dateKey(weekDates[0]);
   const currentWeekPublished = !!(publishedByWeek[currentViewWeekStart] && Object.keys(publishedByWeek[currentViewWeekStart]).length > 0) ||
@@ -1043,12 +1042,13 @@ export default function App() {
 
   // getPublishedAssigned — לעובדים: קורא רק מסידורים שפורסמו
   const getPublishedAssigned = (date,shiftId,role) => {
-    const wk = dateKey(date.getDay()===0 ? date : (() => { const d=new Date(date); d.setDate(d.getDate()-((d.getDay()+6)%7)); return d; })());
-    // חפש ב-publishedByWeek לפי שבוע התאריך
-    const weekStart = (() => { const d=new Date(date); d.setDate(d.getDate()-((d.getDay()+6)%7)); return dateKey(d); })();
+    // מחשב את תחילת השבוע (ראשון) של התאריך
+    const d = new Date(date);
+    const day = d.getDay(); // 0=ראשון
+    d.setDate(d.getDate() - day); // חזור לראשון
+    const weekStart = dateKey(d);
     const pubWeek = publishedByWeek[weekStart];
-    if (pubWeek) return pubWeek[aKey(date,shiftId,role)]||[];
-    // אם זה השבוע הפורסם ב-published
+    if (pubWeek && Object.keys(pubWeek).length > 0) return pubWeek[aKey(date,shiftId,role)]||[];
     if (publishedWeekStart === weekStart && published) return assigned[aKey(date,shiftId,role)]||[];
     return [];
   };
