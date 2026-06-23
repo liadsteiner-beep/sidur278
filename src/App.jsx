@@ -389,7 +389,10 @@ export default function App() {
   const [published, setPublished]     = useState(false);
   const [publishedWeekStart, setPublishedWeekStart] = useState(null);
   const [publishedAssigned, setPublishedAssigned] = useState({});
-  const [publishedAt, setPublishedAt] = useState(null); // legacy
+  const [publishedAt, setPublishedAt] = useState(null);
+  const [publishedWeeksList, setPublishedWeeksList] = useState(() => {
+    try { const l=loadLocalData(); return l?.publishedWeeksList||[]; } catch { return []; }
+  }); // legacy
   const [publishedByWeek, setPublishedByWeek] = useState({});     // weekStart -> assigned
   const [toast, setToast]             = useState(null);
   const [managerTab, setManagerTab]   = useState("assign");
@@ -616,6 +619,19 @@ export default function App() {
       if (d.notes)        setNotes(d.notes);
       if (d.empNotes)     setEmpNotes(d.empNotes);
       if (d.empPasswords) setEmpPasswords(d.empPasswords);
+      if (d.publishedWeeksList && d.publishedWeeksList.length > 0) {
+        setPublishedWeeksList(d.publishedWeeksList);
+      } else if (d.publishedByWeek) {
+        // בפעם הראשונה — בנה רשימה מ-publishedByWeek הקיים
+        const existing = Object.keys(d.publishedByWeek).filter(k=>
+          d.publishedByWeek[k] && Object.keys(d.publishedByWeek[k]).length > 0 &&
+          k !== "2026-06-27" // שבוע 28.6 טרם פורסם
+        );
+        if (existing.length > 0) {
+          setPublishedWeeksList(existing);
+          setDoc(doc(db,"pharmacy","schedule"),{publishedWeeksList:existing},{merge:true}).catch(()=>{});
+        }
+      }
       if (d.managerPassword && d.managerPassword !== "harishpharm2025") setManagerPassword(d.managerPassword);
       if (d.fridayRota && d.fridayRota.length > 0) {
         setFridayRota(d.fridayRota);
@@ -1042,11 +1058,13 @@ export default function App() {
 
   // getPublishedAssigned — לעובדים: קורא רק מסידורים שפורסמו
   const getPublishedAssigned = (date,shiftId,role) => {
-    // מחשב את תחילת השבוע (ראשון) של התאריך
     const d = new Date(date);
-    const day = d.getDay(); // 0=ראשון
-    d.setDate(d.getDate() - day); // חזור לראשון
+    d.setDate(d.getDate() - d.getDay());
     const weekStart = dateKey(d);
+    // בדוק שהשבוע אכן פורסם
+    const isPublished = (publishedWeeksList||[]).includes(weekStart) ||
+      (published && publishedWeekStart === weekStart);
+    if (!isPublished) return [];
     const pubWeek = publishedByWeek[weekStart];
     if (pubWeek && Object.keys(pubWeek).length > 0) return pubWeek[aKey(date,shiftId,role)]||[];
     if (publishedWeekStart === weekStart && published) return assigned[aKey(date,shiftId,role)]||[];
@@ -3008,6 +3026,9 @@ export default function App() {
                       assigned: freshAssigned,
                       publishedAt: now
                     }, {merge:true}).catch(()=>{});
+                    const updatedList = [...new Set([...(publishedWeeksList||[]), pubWeekStart])];
+                    setPublishedWeeksList(updatedList);
+                    setDoc(doc(db,"pharmacy","schedule"),{publishedWeeksList:updatedList},{merge:true}).catch(()=>{});
                     showToast("פורסם ✓");
                     setTimeout(()=>showToast("📥 אל תשכחי להוריד גיבוי!","warn"), 2500);
                   }}>
