@@ -436,7 +436,8 @@ export default function App() {
   const nextWeekPublished = published && publishedWeekStart === nextWeekStart;
   // האם הסידור פורסם לשבוע הנוכחי שהעובד רואה
   const currentViewWeekStart = dateKey(weekDates[0]);
-  const currentWeekPublished = !!(publishedByWeek[currentViewWeekStart] && Object.keys(publishedByWeek[currentViewWeekStart]).length > 0) ||
+  const currentWeekPublished = 
+    (publishedWeeksList||[]).includes(currentViewWeekStart) ||
     (published && publishedWeekStart === currentViewWeekStart);
   const [dayRemarks, setDayRemarks] = useState({});
   const [shiftNotes, setShiftNotes] = useState({});
